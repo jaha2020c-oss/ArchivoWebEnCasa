@@ -1,5 +1,4 @@
-use db_ac186c_comoencasa;
-go
+
 
 create LOGIN administrador with PASSWORD = '12345678';
 create user administrador for login administrador;
@@ -11,22 +10,22 @@ SELECT TOP 5 * FROM Usuario;
 create table Usuario(
 	id_usuario int identity(1,1)primary key,
 	nombre_usuario varchar(50)not null,
-	contraseña varchar(50)not null,
+	contraseÃ±a varchar(50)not null,
 	nombre_completo varchar(100),
 	rol varchar(20) default 'Cajero'
 );
 
-exec sp_rename 'Usuario.contraseña', '[contraseña]', 'COLUMN';
+exec sp_rename 'Usuario.contraseÃ±a', '[contraseÃ±a]', 'COLUMN';
 
 select *from Usuario;
 
 --Prueba a insertar un Cajero
-insert into Usuario(nombre_usuario,contraseña,nombre_completo)
+insert into Usuario(nombre_usuario,contraseÃ±a,nombre_completo)
 values('cajera','12345678','Esteban Perez');
 update Usuario set nombre_completo = 'Esteban Perez' where id_usuario = 3;
 
 --Prueba a insertar un Administrador
-insert into Usuario(nombre_usuario,contraseña,nombre_completo,rol)
+insert into Usuario(nombre_usuario,contraseÃ±a,nombre_completo,rol)
 values('admin','23456789','Karen Ubeda','Administrador');
 --delete from Usuario where id_usuario =;
 
