@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Principal - Comedor</title>
+
+    <style>
+        body{
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f3f3;
+            overflow-x: hidden; 
+        }
+
+        .header {
+            width: 100%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 25px 25px;
+            min-height: 120px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .header img {
+            width: 90px;
+            height: auto;
+            position: absolute;
+            left: 25px;
+        }
+
+        .header h2 {
+            font-size: 26px;
+            color: #333;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .content {
+            margin-top: 70px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, 260px);
+            gap: 35px;
+            justify-content: center;
+        }
+
+        .card {
+            background: white;
+            padding: 28px;
+            text-align: center;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.15);
+            transition: 0.2s;
+        }
+
+        .card:hover {
+            transform: scale(1.05);
+            background: #f0fff0;
+        }
+
+        .logout {
+            grid-column: span 2;
+            background: #ffdddd;
+        }
+
+        .logout:hover {
+            background: #ffcccc;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="logo.png" alt="Logo">
+        <h2>Menú Principal</h2>
+    </div>
+
+    <div class="content">
+        <div class="cards">
+
+            <div class="card" onclick="window.location.href='inventario.html'">
+                📦 Inventario
+            </div>
+
+            <div class="card" onclick="window.location.href='platillos.html'">
+                🍽️ Platillos
+            </div>
+
+            <div class="card" onclick="window.location.href='ventas.html'">
+                💰 Ventas
+            </div>
+
+            <div class="card" onclick="window.location.href='compras.html'">
+                🧾 Compras
+            </div>
+
+            <div class="card logout" onclick="window.location.href='login.html'">
+                ❌ Cerrar sesión
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>

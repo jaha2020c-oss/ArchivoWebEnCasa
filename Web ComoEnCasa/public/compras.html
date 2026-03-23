@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Compras - Comedor</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
+        .sidebar {
+            width:250px; height:100vh; background:white; box-shadow:0 0 10px rgba(0,0,0,.15);
+            padding:20px; position:fixed; left:0; top:0; display:flex; flex-direction:column;
+        }
+        .logo{ width:120px; display:block; margin-bottom:15px; }
+        .panel-title{ font-size:20px; font-weight:bold; margin-bottom:15px; text-align:center; }
+        .menu-item{ font-size:18px; padding:12px 0; border-bottom:1px solid #ddd; cursor:pointer; color:#333; }
+        .menu-item:hover{ color:#4CAF50; }
+        .menu-item.volver{ color:red; }
+        .content{ margin-left:270px; padding:20px; }
+        table{ width:100%; border-collapse:collapse; background:white; margin-top:15px; }
+        th,td{ padding:10px; border:1px solid #ddd; text-align:center; }
+        th{ background:#4CAF50; color:white; }
+        .formulario{ display:flex; flex-direction:column; width:500px; gap:8px; }
+        .formulario input, .formulario select { padding:8px; border-radius:5px; border:1px solid #ccc; }
+        .formulario button { padding:10px; border:none; border-radius:5px; cursor:pointer; background:#4CAF50; color:white; }
+        .message{ font-weight:bold; margin-top:10px; }
+        .message.success{ color:green; } .message.error{ color:red; }
+        .cart-table{ width:100%; border-collapse:collapse; margin-top:10px; }
+        .cart-table th, .cart-table td { border:1px solid #ccc; padding:8px; }
+        .row{ display:flex; gap:10px; align-items:center; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <img src="logo.png" alt="Logo" class="logo">
+        <div class="panel-title">Compras</div>
+
+        <div class="menu-item" onclick="showSection('registrar')">Registrar Compra</div>
+        <div class="menu-item" onclick="showSection('historial')">Ver Historial</div>
+        <div class="menu-item" onclick="showSection('detalles')">Ver Detalle</div>
+        <div class="menu-item volver" onclick="goBack()">Volver</div>
+    </div>
+
+    <div class="content" id="content">
+        <div id="sectionContent"></div>
+    </div>
+
+<script>
+    function goBack(){ window.location.href = "/menu.html"; }
+
+    // Estado simple en la UI
+    let cart = []; // [{ id_ingrediente, nombre, unidad, cantidad, precio, subtotal }]
+    let editingCompraId = null;
+
+    function formatMoney(v){ return parseFloat(v).toFixed(2); }
+
+    async function showSection(option){
+        const container = document.getElementById('sectionContent');
+        if(option === 'registrar'){
+            editingCompraId = null;
+            cart = [];
+            // need ingredientes for select
+            const ingredientes = await fetch('/ingredientes').then(r => r.json()).catch(()=>[]);
+            container.innerHTML = `
+                <h2>Registrar Nueva Compra</h2>
+
+                <div class="formulario">
+                    <label>Usuario (ID):</label>
+                    <input type="number" id="comp_user" placeholder="ID usuario (ej: 1)" />
+
+                    <label>Seleccionar ingrediente:</label>
+                    <div class="row">
+                        <select id="comp_ing">
+                            ${ingredientes.map(i => `<option value="${i.id_ingrediente}" data-precio="${i.precio_compra}" data-unidad="${i.unidad_medida}">${i.nombre_ingrediente} (${i.unidad_medida})</option>`).join('')}
+                        </select>
+                        <input type="number" id="comp_cant" placeholder="Cantidad" step="0.01" min="0" style="width:120px;" />
+                        <input type="number" id="comp_prec" placeholder="Precio" step="0.01" min="0" style="width:120px;" />
+                        <button id="btnAdd">Añadir</button>
+                    </div>
+
+                    <div>
+                        <h4>Carrito</h4>
+                        <table class="cart-table">
+                            <thead><tr><th>Ingrediente</th><th>Unidad</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th><th>Acción</th></tr></thead>
+                            <tbody id="cartBody"><tr><td colspan="6">Carrito vacío</td></tr></tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <strong>Total: $<span id="cartTotal">0.00</span></strong>
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        <button id="btnConfirm">Confirmar compra</button>
+                    </div>
+
+                    <p id="msgRegistrar" class="message"></p>
+                </div>
+            `;
+
+            // default price set
+            const comp_ing = document.getElementById('comp_ing');
+            const comp_prec = document.getElementById('comp_prec');
+            if(comp_ing && comp_prec){
+                comp_prec.value = comp_ing.selectedOptions[0]?.dataset?.precio || '';
+                comp_ing.addEventListener('change', ()=> {
+                    comp_prec.value = comp_ing.selectedOptions[0]?.dataset?.precio || '';
+                });
+            }
+
+            document.getElementById('btnAdd').addEventListener('click', (e)=>{
+                e.preventDefault();
+                const sel = document.getElementById('comp_ing');
+                const id = sel.value;
+                const nombre = sel.selectedOptions[0].text;
+                const unidad = sel.selectedOptions[0].dataset.unidad || '';
+                const cantidad = parseFloat(document.getElementById('comp_cant').value || 0);
+                const precio = parseFloat(document.getElementById('comp_prec').value || 0);
+                if(!id || cantidad <= 0 || precio < 0){ alert('Completa ingrediente, cantidad y precio correctamente'); return; }
+                const subtotal = Math.round((cantidad * precio + Number.EPSILON) * 100) / 100;
+                cart.push({ id_ingrediente: parseInt(id,10), nombre, unidad, cantidad, precio, subtotal });
+                renderCart();
+            });
+
+            function renderCart(){
+                const tbody = document.getElementById('cartBody');
+                tbody.innerHTML = '';
+                if(cart.length === 0){ tbody.innerHTML = '<tr><td colspan="6">Carrito vacío</td></tr>'; document.getElementById('cartTotal').innerText = '0.00'; return; }
+                let total = 0;
+                cart.forEach((c, idx) => {
+                    total += c.subtotal;
+                    tbody.innerHTML += `<tr>
+                        <td>${c.nombre}</td>
+                        <td>${c.unidad}</td>
+                        <td>${c.cantidad}</td>
+                        <td>${formatMoney(c.precio)}</td>
+                        <td>${formatMoney(c.subtotal)}</td>
+                        <td><button data-idx="${idx}" class="btnRemove">Quitar</button></td>
+                    </tr>`;
+                });
+                document.getElementById('cartTotal').innerText = formatMoney(total);
+                // remove handlers
+                document.querySelectorAll('.btnRemove').forEach(b => b.addEventListener('click', (ev)=>{
+                    const i = parseInt(ev.target.dataset.idx, 10);
+                    cart.splice(i,1);
+                    renderCart();
+                }));
+            }
+
+            document.getElementById('btnConfirm').addEventListener('click', async (e)=>{
+                e.preventDefault();
+                const userId = parseInt(document.getElementById('comp_user').value, 10);
+                const msg = document.getElementById('msgRegistrar');
+                msg.innerText = '';
+                if(isNaN(userId) || userId <= 0){ msg.className='message error'; msg.innerText='Ingresa un ID de usuario válido'; return; }
+                if(cart.length === 0){ msg.className='message error'; msg.innerText='Carrito vacío'; return; }
+
+                // preparar payload
+                const items = cart.map(c => ({ id_ingrediente: c.id_ingrediente, cantidad: c.cantidad, precio: c.precio }));
+                try {
+                    const resp = await fetch('/registrarCompra', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ id_usuario: userId, items })
+                    });
+                    const txt = await resp.text();
+                    if(txt === 'OK'){
+                        msg.className='message success';
+                        msg.innerText = 'Compra registrada ✔';
+                        cart = [];
+                        renderCart();
+                    } else {
+                        msg.className='message error';
+                        msg.innerText = txt || 'Error al registrar compra';
+                    }
+                } catch (err) {
+                    msg.className='message error';
+                    msg.innerText = 'Error de conexión';
+                    console.error(err);
+                }
+            });
+        }
+
+        if(option === 'historial'){
+            // mostrar compras (cabeceras)
+            const container = document.getElementById('sectionContent');
+            container.innerHTML = `<h2>Historial de Compras</h2>
+                <table>
+                    <thead><tr><th>ID</th><th>Fecha</th><th>Total</th><th>Usuario</th><th>Acciones</th></tr></thead>
+                    <tbody id="histBody"><tr><td colspan="5">Cargando...</td></tr></tbody>
+                </table>
+            `;
+            try {
+                const data = await fetch('/compras').then(r => r.json());
+                const tbody = document.getElementById('histBody');
+                tbody.innerHTML = '';
+                data.forEach(c => {
+                    const fecha = new Date(c.fecha_compra).toLocaleString();
+                    tbody.innerHTML += `<tr>
+                        <td>${c.id_compra}</td>
+                        <td>${fecha}</td>
+                        <td>${formatMoney(c.total_compra || 0)}</td>
+                        <td>${c.nombre_completo || c.id_usuario}</td>
+                        <td>
+                            <button class="btnView" data-id="${c.id_compra}">Ver</button>
+                            <button class="btnEdit" data-id="${c.id_compra}">Editar</button>
+                            <button class="btnDelete" data-id="${c.id_compra}">Eliminar</button>
+                        </td>
+                    </tr>`;
+                });
+
+                // handlers
+                document.querySelectorAll('.btnView').forEach(b => b.addEventListener('click', async (e)=>{
+                    const id = e.target.dataset.id;
+                    await showCompraDetalle(id);
+                }));
+
+                document.querySelectorAll('.btnEdit').forEach(b => b.addEventListener('click', async (e)=>{
+                    const id = e.target.dataset.id;
+                    await cargarParaEditar(id);
+                }));
+
+                document.querySelectorAll('.btnDelete').forEach(b => b.addEventListener('click', async (e)=>{
+                    const id = e.target.dataset.id;
+                    if(!confirm('¿Eliminar esta compra? Esto restará las cantidades del inventario.')) return;
+                    try {
+                        const resp = await fetch('/eliminarCompra', {
+                            method: 'POST',
+                            headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({ id_compra: id })
+                        });
+                        const txt = await resp.text();
+                        if(txt === 'OK'){ alert('Eliminado'); showSection('historial'); }
+                        else alert('Error: ' + txt);
+                    } catch(err){ console.error(err); alert('Error de conexión'); }
+                }));
+
+            } catch (err) {
+                document.getElementById('histBody').innerHTML = '<tr><td colspan="5">Error al cargar historial</td></tr>';
+                console.error(err);
+            }
+        }
+
+        if(option === 'detalles'){
+            // pedir id manualmente
+            container.innerHTML = `
+                <h2>Ver Detalle de Compra</h2>
+                <div class="formulario">
+                    <label>ID de compra:</label>
+                    <input type="number" id="det_id" />
+                    <button id="btnVerDet">Ver detalle</button>
+                    <div id="detalleBox"></div>
+                </div>
+            `;
+            document.getElementById('btnVerDet').addEventListener('click', async ()=>{
+                const id = parseInt(document.getElementById('det_id').value, 10);
+                if(isNaN(id)){ alert('ID inválido'); return; }
+                await showCompraDetalle(id);
+            });
+        }
+    }
+
+    // función para mostrar detalle en pantalla modal/box
+    async function showCompraDetalle(id){
+        try {
+            const data = await fetch(`/compra/${encodeURIComponent(id)}`).then(r => {
+                if(!r.ok) throw new Error('No encontrado');
+                return r.json();
+            });
+            const box = document.getElementById('sectionContent');
+            // si estamos en historial, reemplazamos parte inferior o abrimos nueva vista
+            box.innerHTML = `<h2>Detalle Compra #${data.compra.id_compra}</h2>
+                <p>Fecha: ${new Date(data.compra.fecha_compra).toLocaleString()}</p>
+                <p>Total: $${formatMoney(data.compra.total_compra || 0)}</p>
+                <table>
+                    <thead><tr><th>ID</th><th>Ingrediente</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th></tr></thead>
+                    <tbody>
+                        ${data.detalles.map(d => `<tr><td>${d.id_detalle_compra}</td><td>${d.nombre_ingrediente}</td><td>${d.cantidad}</td><td>${formatMoney(d.precio)}</td><td>${formatMoney(d.subtotal)}</td></tr>`).join('')}
+                    </tbody>
+                </table>
+                <div style="margin-top:10px;"><button onclick="showSection('historial')">Volver</button></div>
+            `;
+        } catch (err) {
+            alert('Error al cargar detalle: ' + (err.message || ''));
+            console.error(err);
+        }
+    }
+
+    // cargar compra para editar (usa la UI de registrar, pero precarga datos)
+    async function cargarParaEditar(id){
+        try {
+            const data = await fetch(`/compra/${encodeURIComponent(id)}`).then(r => {
+                if(!r.ok) throw new Error('No encontrado');
+                return r.json();
+            });
+            // usar la sección registrar para precargar
+            await showSection('registrar');
+            // set user
+            document.getElementById('comp_user').value = data.compra.id_usuario;
+            // vaciar cart e introducir items
+            cart = data.detalles.map(d => ({
+                id_ingrediente: d.id_ingrediente,
+                nombre: d.nombre_ingrediente,
+                unidad: '', // no llega unidad desde esta ruta, pero no es crítico
+                cantidad: parseFloat(d.cantidad),
+                precio: parseFloat(d.precio),
+                subtotal: parseFloat(d.subtotal)
+            }));
+            editingCompraId = data.compra.id_compra;
+            // mostrar cart y total
+            const render = document.querySelector('#btnAdd').parentElement; // quick way to ensure renderCart exists
+            // call the internal function renderCart by simulating add (we cannot access inner renderCart), so simply re-render using a small trick:
+            const tbody = document.getElementById('cartBody');
+            tbody.innerHTML = '';
+            let total = 0;
+            cart.forEach((c, idx) => {
+                total += c.subtotal;
+                tbody.innerHTML += `<tr>
+                    <td>${c.nombre}</td>
+                    <td>${c.unidad}</td>
+                    <td>${c.cantidad}</td>
+                    <td>${formatMoney(c.precio)}</td>
+                    <td>${formatMoney(c.subtotal)}</td>
+                    <td><button data-idx="${idx}" class="btnRemove">Quitar</button></td>
+                </tr>`;
+            });
+            document.getElementById('cartTotal').innerText = formatMoney(total);
+            // attach remove handlers
+            document.querySelectorAll('.btnRemove').forEach(b => b.addEventListener('click', (ev)=>{
+                const i = parseInt(ev.target.dataset.idx, 10);
+                cart.splice(i,1);
+                // re-render by clicking btnAdd trick: but simpler: call showSection registrars again
+                showSection('registrar');
+                // re-populate after showSection finishes (small timeout)
+                setTimeout(()=>{
+                    document.getElementById('comp_user').value = data.compra.id_usuario;
+                    cart = data.detalles.map(d => ({
+                        id_ingrediente: d.id_ingrediente,
+                        nombre: d.nombre_ingrediente,
+                        unidad: '',
+                        cantidad: parseFloat(d.cantidad),
+                        precio: parseFloat(d.precio),
+                        subtotal: parseFloat(d.subtotal)
+                    }));
+                    // re-render by calling cargarParaEditar recursively once (careful). Simpler: reload historial.
+                }, 300);
+            }));
+
+            // change Confirm button behavior: when editing, Confirm -> enviar /editarCompra
+            const btnConfirm = document.getElementById('btnConfirm');
+            btnConfirm.innerText = 'Guardar cambios (editar compra)';
+            btnConfirm.onclick = async function(e){
+                e.preventDefault();
+                const userId = parseInt(document.getElementById('comp_user').value, 10);
+                const msg = document.getElementById('msgRegistrar');
+                msg.innerText = '';
+                if(isNaN(userId) || userId <= 0){ msg.className='message error'; msg.innerText='Ingresa un ID de usuario válido'; return; }
+                if(cart.length === 0){ msg.className='message error'; msg.innerText='Carrito vacío'; return; }
+                try {
+                    const items = cart.map(c => ({ id_ingrediente: c.id_ingrediente, cantidad: c.cantidad, precio: c.precio }));
+                    const resp = await fetch('/editarCompra', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({ id_compra: editingCompraId, items })
+                    });
+                    const txt = await resp.text();
+                    if(txt === 'OK'){
+                        msg.className='message success';
+                        msg.innerText='Compra editada ✔';
+                        editingCompraId = null;
+                        // reset button
+                        btnConfirm.innerText = 'Confirmar compra';
+                        showSection('historial');
+                    } else {
+                        msg.className='message error';
+                        msg.innerText = txt || 'Error al editar compra';
+                    }
+                } catch (err) {
+                    msg.className='message error';
+                    msg.innerText='Error de conexión';
+                    console.error(err);
+                }
+            };
+        } catch (err) {
+            alert('Error al cargar compra para editar: ' + (err.message || ''));
+            console.error(err);
+        }
+    }
+
+    // por defecto mostrar historial
+    showSection('historial');
+</script>
+</body>
+</html>

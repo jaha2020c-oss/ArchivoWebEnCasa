@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platillos - Comedor</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f5f5f5;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background: #ffffff;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+            padding: 20px;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            width: 120px;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .menu-item {
+            font-size: 18px;
+            padding: 12px 0;
+            border-bottom: 1px solid #ddd;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .menu-item:hover { color: #4CAF50; }
+        .menu-item.volver { color: red; }
+
+        /* Content */
+        .content {
+            margin-left: 270px; 
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        th { background: #4CAF50; color: white; }
+        tbody tr:hover { background: #f1f1f1; }
+
+        .formulario { display: flex; flex-direction: column; width: 400px; }
+        .formulario input, .formulario select { padding: 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc; }
+        .formulario button { padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .formulario button:hover { background: #45a049; }
+
+        .message { font-weight: bold; margin-top: 10px; }
+        .message.success { color: green; }
+        .message.error { color: red; }
+
+        .row { display:flex; gap:10px; align-items:center; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <img src="logo.png" alt="Logo" class="logo">
+        <div class="panel-title">Platillos</div>
+
+        <div class="menu-item" onclick="showSection('ver')">Ver Platillos</div>
+        <div class="menu-item" onclick="showSection('agregar')">Agregar Platillo</div>
+        <div class="menu-item" onclick="showSection('editar')">Editar Platillo</div>
+        <div class="menu-item volver" onclick="goBack()">Volver</div>
+    </div>
+
+    <div class="content" id="content">
+        <div id="sectionContent"></div>
+    </div>
+
+    <script>
+        function goBack(){ window.location.href = "/menu.html"; }
+
+        function showSection(option){
+            const container = document.getElementById('sectionContent');
+
+            if(option === 'ver'){
+                container.innerHTML = `
+                    <h2>Lista de Platillos</h2>
+                    <div class="scroll-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Precio</th>
+                            <th>Disponible</th>
+                            <th>Última actualización</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tablaPlatillos"><tr><td colspan="6">Cargando...</td></tr></tbody>
+                      </table>
+                    </div>
+                `;
+                fetch('/platillos')
+                    .then(r => r.json())
+                    .then(data => {
+                        const tbody = document.getElementById('tablaPlatillos');
+                        tbody.innerHTML = '';
+                        data.forEach(p => {
+                            const disponibleText = p.disponible ? 'Disponible' : 'No disponible';
+                            const fecha = p.fecha_actualizacion ? new Date(p.fecha_actualizacion).toLocaleString() : '';
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${p.id_platillo}</td>
+                                    <td>${p.nombre_platillo}</td>
+                                    <td>${p.tipo}</td>
+                                    <td>${p.precio}</td>
+                                    <td>${disponibleText}</td>
+                                    <td>${fecha}</td>
+                                </tr>
+                            `;
+                        });
+                    })
+                    .catch(err => {
+                        document.getElementById('tablaPlatillos').innerHTML = '<tr><td colspan="6">Error al cargar platillos</td></tr>';
+                        console.error(err);
+                    });
+            }
+
+            if(option === 'agregar'){
+                container.innerHTML = `
+                    <h2>Agregar Platillo</h2>
+                    <form id="formAgregar" class="formulario">
+                        <label>Nombre:</label>
+                        <input type="text" id="p_nombre" required>
+
+                        <label>Tipo (ej: desayuno, almuerzo):</label>
+                        <input type="text" id="p_tipo" required>
+
+                        <label>Precio:</label>
+                        <input type="number" step="0.01" id="p_precio" required>
+
+                        <label>Disponibilidad:</label>
+                        <select id="p_disponible" required>
+                            <option value="Disponible">Disponible</option>
+                            <option value="No disponible">No disponible</option>
+                        </select>
+
+                        <button type="submit">Agregar</button>
+                    </form>
+                    <p id="msgAgregar" class="message"></p>
+                `;
+                document.getElementById('formAgregar').addEventListener('submit', async (e)=>{
+                    e.preventDefault();
+                    const nombre = document.getElementById('p_nombre').value.trim();
+                    const tipo = document.getElementById('p_tipo').value.trim();
+                    const precio = document.getElementById('p_precio').value;
+                    const disponible = document.getElementById('p_disponible').value;
+
+                    const msg = document.getElementById('msgAgregar');
+                    msg.innerText = '';
+
+                    if(!nombre || !tipo || precio === '') { msg.className='message error'; msg.innerText='Completa todos los campos'; return; }
+
+                    try {
+                        const resp = await fetch('/agregarPlatillo', {
+                            method: 'POST',
+                            headers: {'Content-Type':'application/json'},
+                            body: JSON.stringify({ nombre, tipo, precio, disponible })
+                        });
+                        const text = await resp.text();
+                        if(text === 'OK'){
+                            msg.className='message success';
+                            msg.innerText='Platillo agregado ✔';
+                            document.getElementById('formAgregar').reset();
+                        } else {
+                            msg.className='message error';
+                            msg.innerText='Error al agregar platillo';
+                        }
+                    } catch(e){
+                        msg.className='message error';
+                        msg.innerText='Error de conexión';
+                        console.error(e);
+                    }
+                });
+            }
+
+            if(option === 'editar'){
+                container.innerHTML = `
+                    <h2>Editar / Eliminar Platillo</h2>
+                    <div class="formulario" style="width:450px;">
+                        <label>ID del platillo:</label>
+                        <div class="row">
+                            <input type="number" id="edit_id" placeholder="Ingrese ID" style="flex:1;">
+                            <button id="btnBuscar">Buscar</button>
+                        </div>
+
+                        <div id="editForm" style="display:none; margin-top:15px;">
+                            <label>Nombre:</label>
+                            <input type="text" id="edit_nombre">
+
+                            <label>Tipo:</label>
+                            <input type="text" id="edit_tipo">
+
+                            <label>Precio:</label>
+                            <input type="number" step="0.01" id="edit_precio">
+
+                            <label>Disponibilidad:</label>
+                            <select id="edit_disponible">
+                                <option value="Disponible">Disponible</option>
+                                <option value="No disponible">No disponible</option>
+                            </select>
+
+                            <div style="display:flex; gap:10px; margin-top:10px;">
+                                <button id="btnGuardar" type="button">Guardar cambios</button>
+                                <button id="btnEliminar" type="button" style="background:#f44336;">Eliminar platillo</button>
+                            </div>
+
+                            <p id="editMensaje" class="message"></p>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('btnBuscar').addEventListener('click', async function(e){
+                    e.preventDefault();
+                    const id = document.getElementById('edit_id').value.trim();
+                    const msg = document.getElementById('editMensaje');
+                    msg.innerText = '';
+                    if(!id){ msg.className='message error'; msg.innerText='Ingresa un ID válido'; return; }
+
+                    try {
+                        const resp = await fetch(`/platillo/${encodeURIComponent(id)}`);
+                        if(resp.status === 404){
+                            msg.className='message error';
+                            msg.innerText='Platillo no encontrado';
+                            document.getElementById('editForm').style.display='none';
+                            return;
+                        }
+                        const data = await resp.json();
+                        document.getElementById('editForm').style.display='block';
+                        document.getElementById('edit_nombre').value = data.nombre_platillo || '';
+                        document.getElementById('edit_tipo').value = data.tipo || '';
+                        document.getElementById('edit_precio').value = data.precio || 0;
+                        document.getElementById('edit_disponible').value = data.disponible ? 'Disponible' : 'No disponible';
+                        msg.innerText = '';
+                    } catch(e){
+                        msg.className='message error';
+                        msg.innerText='Error al buscar platillo';
+                        console.error(e);
+                    }
+                });
+
+                // guardar cambios
+                document.addEventListener('click', function(e){
+                    if(e.target && e.target.id === 'btnGuardar'){
+                        (async function(){
+                            const id = document.getElementById('edit_id').value.trim();
+                            const nombre = document.getElementById('edit_nombre').value.trim();
+                            const tipo = document.getElementById('edit_tipo').value.trim();
+                            const precio = document.getElementById('edit_precio').value;
+                            const disponible = document.getElementById('edit_disponible').value;
+                            const msg = document.getElementById('editMensaje');
+                            msg.innerText = '';
+
+                            if(!id || !nombre || !tipo || precio === ''){
+                                msg.className='message error';
+                                msg.innerText='Todos los campos son obligatorios';
+                                return;
+                            }
+
+                            try {
+                                const resp = await fetch('/editarPlatillo', {
+                                    method: 'POST',
+                                    headers: {'Content-Type':'application/json'},
+                                    body: JSON.stringify({ id, nombre, tipo, precio, disponible })
+                                });
+                                const text = await resp.text();
+                                if(text === 'OK'){
+                                    msg.className='message success';
+                                    msg.innerText='Platillo actualizado correctamente';
+                                } else {
+                                    msg.className='message error';
+                                    msg.innerText='Error al actualizar';
+                                }
+                            } catch(e){
+                                msg.className='message error';
+                                msg.innerText='Error de conexión';
+                                console.error(e);
+                            }
+                        })();
+                    }
+                });
+
+                // eliminar platillo
+                document.addEventListener('click', function(e){
+                    if(e.target && e.target.id === 'btnEliminar'){
+                        (async function(){
+                            const id = document.getElementById('edit_id').value.trim();
+                            const msg = document.getElementById('editMensaje');
+                            msg.innerText = '';
+
+                            if(!id){
+                                msg.className='message error';
+                                msg.innerText='Ingresa un ID válido';
+                                return;
+                            }
+
+                            if(!confirm('¿Estás seguro de eliminar este platillo? Esta acción no se puede deshacer.')) return;
+
+                            try {
+                                const resp = await fetch('/eliminarPlatillo', {
+                                    method: 'POST',
+                                    headers: {'Content-Type':'application/json'},
+                                    body: JSON.stringify({ id })
+                                });
+                                const text = await resp.text();
+                                if(text === 'OK'){
+                                    msg.className='message success';
+                                    msg.innerText='Platillo eliminado correctamente';
+                                    document.getElementById('editForm').style.display='none';
+                                    document.getElementById('edit_id').value='';
+                                } else {
+                                    msg.className='message error';
+                                    msg.innerText='Error al eliminar';
+                                }
+                            } catch(e){
+                                msg.className='message error';
+                                msg.innerText='Error de conexión';
+                                console.error(e);
+                            }
+                        })();
+                    }
+                });
+            }
+
+            // mostrar ver por defecto si quieres:
+            // showSection('ver');
+        }
+    </script>
+</body>
+</html>
