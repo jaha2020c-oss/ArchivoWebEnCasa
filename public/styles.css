@@ -1,0 +1,184 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial Black', sans-serif;
+}
+
+/* Header superior */
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 50px;
+    background: white;
+}
+
+.cart-button {
+    display: flex;
+    align-items: center;
+    background: #f8f8f8;
+    border: 1px solid #ddd;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.cart-button:hover {
+    background: #eee;
+}
+
+.cart-icon {
+    font-size: 24px;
+    margin-right: 8px;
+}
+
+.cart-text {
+    font-size: 16px;
+    color: #333;
+    font-weight: bold;
+}
+
+.large-cart { font-size: 32px; cursor: pointer; }
+
+.social-box {
+    border: 1px solid #ddd;
+    padding: 5px 15px;
+    border-radius: 20px;
+    margin-right: 15px;
+    font-size: 14px;
+}
+
+.admin-link {
+    border: 2px solid #333;
+    color: #e30613;
+    text-decoration: none;
+    padding: 6px 18px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+/* MENÚ DE NAVEGACIÓN - AJUSTADO */
+.nav-bar {
+    position: relative;
+    background: white;
+    height: 100px; /* Altura aumentada para que el logo respire */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-top: 1px solid #f0f0f0;
+    z-index: 100;
+}
+
+/* El círculo blanco contenedor */
+.logo-container {
+    position: absolute;
+    top: -15px; /* Ajustado para que suba un poco más */
+    background: white;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    z-index: 110;
+    padding: 15px; /* Espacio interno para que el logo no toque los bordes */
+}
+
+/* La imagen PNG real */
+.main-logo {
+    width: 120%; /* Ajustamos para que respire dentro del círculo */
+    height: auto;
+    object-fit: contain; /* Asegura que no se deforme */
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 30px;
+    width: 90%;
+    justify-content: center;
+    align-items: center;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #e30613;
+    font-size: 14px;
+    transition: 0.3s;
+}
+
+.nav-links a:hover { color: #f39c12; }
+
+.spacer { width: 180px; } /* Espacio exacto para que el logo no tape las letras */
+
+/* HERO Y FONDO */
+.hero {
+    position: relative;
+    height: 500px;
+    overflow: hidden;
+}
+
+.hero-image-container {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.bg-image {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hero-title {
+    position: relative;
+    color: #e30613;
+    font-size: 60px;
+    text-shadow: 4px 4px 0px white;
+    z-index: 5;
+    text-align: center;
+}
+
+.red-wave {
+    position: absolute;
+    bottom: -100px;
+    left: -5%;
+    width: 110%;
+    height: 250px;
+    background: #e30613;
+    border-radius: 50% 50% 0 0;
+    z-index: 6;
+}
+
+/* CARTAS */
+.promos-wrapper {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: -100px;
+}
+
+.promo-card {
+    background: white;
+    padding: 30px;
+    border-radius: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    text-align: center;
+    width: 450px;
+}
+
+.big-phone {
+    font-size: 65px;
+    color: #e30613;
+    letter-spacing: -3px;
+}
+
+.btn-buy { background: #e30613; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; }
+.btn-share { background: #243b55; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; }
+
