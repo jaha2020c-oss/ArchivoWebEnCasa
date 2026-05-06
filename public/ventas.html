@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Ventas - Como en Casa</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f4f7f6; display: flex; }
+        .sidebar { width: 260px; height: 100vh; background: white; padding: 20px; position: fixed; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .logo { width: 100px; margin: 0 auto 20px; display: block; }
+        .menu-item { padding: 15px; border-radius: 8px; cursor: pointer; color: #555; margin-bottom: 5px; transition: 0.3s; }
+        .menu-item:hover { background: #e8f5e9; color: #2e7d32; }
+        .menu-item.active { background: #4caf50; color: white; }
+        .volver { color: #d32f2f; font-weight: bold; margin-top: auto; border-top: 1px solid #eee; padding-top: 20px; }
+        
+        .content { margin-left: 300px; padding: 40px; width: 100%; }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        h2 { color: #333; margin-top: 0; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #666; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
+        .btn { padding: 8px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; transition: 0.2s; }
+        .btn-edit { background: #e3f2fd; color: #1976d2; margin-right: 5px; }
+        .btn-delete { background: #ffebee; color: #c62828; }
+        .btn:hover { filter: brightness(0.9); }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <img src="/logo.png" alt="Logo" class="logo">
+        <div class="menu-item active">Historial de Ventas</div>
+        <div class="menu-item volver" onclick="location.href='menu.html'">Volver al Menú</div>
+    </div>
+
+    <div class="content">
+        <div class="card">
+            <h2>Ventas Realizadas</h2>
+            <p style="color: #888;">Gestión de registros almacenados </p>
+            <table id="tablaVentas">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Cajero</th>
+                        <th>Total</th>
+                        <th>Método</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="listaVentas">
+                    <tr><td colspan="6">Cargando datos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function cargarVentas() {
+            try {
+                const res = await fetch('/ventas');
+                const ventas = await res.json();
+                const tabla = document.getElementById('listaVentas');
+                tabla.innerHTML = '';
+
+                ventas.forEach(v => {
+                    tabla.innerHTML += `
+                        <tr>
+                            <td>#${v.id_venta}</td>
+                            <td>${new Date(v.fecha_venta).toLocaleDateString()}</td>
+                            <td>${v.nombre_completo}</td>
+                            <td><strong>C$ ${v.total_venta.toFixed(2)}</strong></td>
+                            <td>${v.metodo_pago}</td>
+                            <td>
+                                <button class="btn btn-edit" onclick="editar(${v.id_venta}, '${v.metodo_pago}', ${v.total_venta})">Editar</button>
+                                <button class="btn btn-delete" onclick="borrar(${v.id_venta})">Eliminar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                document.getElementById('listaVentas').innerHTML = '<tr><td colspan="6" style="color:red">Error al conectar con Azure.</td></tr>';
+            }
+        }
+
+        async function editar(id, metodo, total) {
+            const nuevoMetodo = prompt("Editar Método de Pago:", metodo);
+            const nuevoTotal = prompt("Editar Total (C$):", total);
+            if (nuevoMetodo && nuevoTotal) {
+                await fetch(`/ventas/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ metodo_pago: nuevoMetodo, total_venta: nuevoTotal })
+                });
+                cargarVentas();
+            }
+        }
+
+        async function borrar(id) {
+            if (confirm(`¿Eliminar venta #${id}?`)) {
+                await fetch(`/ventas/${id}`, { method: 'DELETE' });
+                cargarVentas();
+            }
+        }
+
+        window.onload = cargarVentas;
+    </script>
+</body>
+</html>
