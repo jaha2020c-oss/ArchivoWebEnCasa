@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Administrador</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #e30613; /* Fondo Rojo Tip-Top */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: white;
+            width: 350px;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0px 10px 25px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        .logo { width: 100px; margin-bottom: 20px; }
+        h2 { color: #333; margin-bottom: 25px; }
+        label { display: block; text-align: left; font-weight: bold; margin-bottom: 5px; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #e30613;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover { background: #b5050f; }
+        .back-link { margin-top: 15px; display: block; color: #777; text-decoration: none; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="logo.png" alt="Logo" class="logo">
+        <h2>Panel de Administración</h2>
+        <p id="msgError" style="display:none;"></p>
+
+        <label>Usuario</label>
+        <input type="text" id="usuario">
+
+        <label>Contraseña</label>
+        <input type="password" id="contraseña">
+
+        <button onclick="login()">ENTRAR</button>
+        <a href="index.html" class="back-link">← Volver al inicio</a>
+    </div>
+
+    <script>
+        async function login() {
+            const user = document.getElementById("usuario").value;
+            const pass = document.getElementById("contraseña").value;
+            const msg = document.getElementById("msgError");
+
+            if (!user || !pass) {
+                msg.innerText = "Complete todos los campos";
+                msg.style.display = "block";
+                msg.style.color = "red";
+                return;
+            }
+
+            try {
+                const response = await fetch("/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `usuario=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`
+                });
+
+                const result = await response.text();
+
+                if (result === "OK") {
+                    window.location.href = "/menu.html";
+                } else {
+                    msg.innerText = "Credenciales incorrectas";
+                    msg.style.display = "block";
+                    msg.style.color = "red";
+                }
+            } catch(e) {
+                msg.innerText = "Error de conexión";
+                msg.style.display = "block";
+            }
+        }
+    </script>
+</body>
+</html>
