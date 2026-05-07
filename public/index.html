@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Como en Casa - Sabor Casero</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="top-header">
+      <button class="cart-button" onclick="mostrarCanasta()">
+          <span class="cart-icon">🛒</span>
+          <span class="cart-text">Canasta</span>
+      </button>
+      <div class="header-right">
+          <a href="login.html" class="admin-link">Administrar</a>
+      </div>
+  </header>
+
+  <nav class="nav-bar">
+      <div class="logo-container">
+          <img src="logo.png" alt="Logo Como en Casa" class="main-logo">
+      </div>
+      <ul class="nav-links">
+          <li><a href="#" onclick="mostrarInicio()">INICIO</a></li>
+          <li><a href="#" onclick="mostrarNosotros()">NOSOTROS</a></li>
+          <li class="spacer"></li>
+          <li><a href="#" onclick="mostrarMenu()">MENÚ</a></li>
+          <li><a href="#" onclick="mostrarContacto()">CONTACTO</a></li>
+      </ul>
+  </nav>
+
+  <section class="hero" id="hero-section">
+      
+      <div id="contenido-inicio">
+          <div class="hero-image-container">
+              <img src="Fondodeinicio.png" alt="Fondo" class="bg-image">
+              <h1 class="hero-title">¡Sé Parte de la Gran Familia!</h1>
+          </div>
+      </div>
+
+      <div id="contenido-nosotros" style="display: none;">
+          <div class="nosotros-container">
+              <div class="info-box">
+                  <h2>Visión</h2>
+                  <p>La empresa “Como en Casa” proyecta consolidarse como el comedor de referencia dentro de su comunidad, destacándose por preservar los sabores tradicionales mediante una gestión moderna además de eficiente; su propósito se orienta hacia el reconocimiento por la calidad de sus servicios, así como por la autenticidad de su propuesta gastronómica.</p>
+              </div>
+              <div class="info-box">
+                  <h2>Misión</h2>
+                  <p>La empresa “Como en Casa” tiene como propósito ofrecer a sus clientes una experiencia gastronómica auténtica además de reconfortante, basada en la preparación de comida casera de alta calidad; su enfoque se centra en brindar un servicio cercano, caracterizado por la atención personalizada además de la satisfacción del cliente. </p>
+              </div>
+          </div>
+      </div>
+
+
+      <div id="contenido-menu" style="display: none;">
+          <div class="menu-full-container">
+              <h2 style="text-align: center; color: #e30613; margin-bottom: 30px;">Nuestro Menú Casero</h2>
+              <div class="lista-platillos-estatica">
+                  <div class="platillo-card">
+                      <div class="platillo-info">
+                          <div class="platillo-nombre">Gallo pinto con huevo revuelto</div>
+                          <div class="platillo-precio">C$ 60</div>
+                      </div>
+                      <div class="platillo-imagen-container"><img src="Gallopintoyhuevo.png"></div>
+                  </div>
+                  <div class="platillo-card">
+                      <div class="platillo-info">
+                          <div class="platillo-nombre">Pollo asado</div>
+                          <div class="platillo-precio">C$ 320</div>
+                      </div>
+                      <div class="platillo-imagen-container"><img src="Polloasado.png"></div>
+                  </div>
+                  <div class="platillo-card">
+                      <div class="platillo-info">
+                          <div class="platillo-nombre">Sopa de pescado</div>
+                          <div class="platillo-precio">C$ 200</div>
+                      </div>
+                      <div class="platillo-imagen-container"><img src="Sopadepescado.png"></div>
+                  </div>
+                  <div class="platillo-card">
+                      <div class="platillo-info">
+                          <div class="platillo-nombre">Cacao</div>
+                          <div class="platillo-precio">C$ 30</div>
+                      </div>
+                      <div class="platillo-imagen-container"><img src="Cacao.png"></div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <div id="contenido-contacto" style="display: none;">
+          <div class="contacto-simple">
+              <h2>Contacto</h2>
+              <p>¡Estamos para servirte! Llámanos al 1900-2020</p>
+          </div>
+      </div>
+
+      <div id="contenido-canasta" style="display: none;">
+          <div class="canasta-ui">
+              <div class="canasta-header">
+                  <h2>Canasta</h2>
+                  <button class="btn-volver" onclick="mostrarInicio()">Volver a inicio</button>
+              </div>
+              <div class="canasta-body">
+                  <div class="form-grupo">
+                      <label>Platillo:</label>
+                      <select id="selectPlatillo">
+                          <option value="">Cargando opciones...</option>
+                      </select>
+                      <input type="number" id="cantPlatillo" value="1" min="1">
+                      <button onclick="agregarAlCarrito()" class="btn-add">Agregar</button>
+                  </div>
+                  <table class="tabla-canasta">
+                      <thead>
+                          <tr>
+                              <th>Producto</th>
+                              <th>Precio</th>
+                              <th>Cant.</th>
+                              <th>Subtotal</th>
+                          </tr>
+                      </thead>
+                      <tbody id="body-carrito"></tbody>
+                  </table>
+                  <div class="total-seccion">
+                      <h3>Total: C$ <span id="total-canasta">0</span></h3>
+                      <button onclick="finalizarVenta()" class="btn-finalizar">Finalizar Compra</button>
+                  </div>
+              </div>
+          </div>
+      </div>
+      
+      <div class="red-wave"></div>
+  </section>
+
+  <section class="promos-wrapper" id="seccion-promos">
+      <div class="promo-card">
+          <h3>Sopa de pescado (Especial)</h3>
+          <img src="Sopadepescado.png" alt="Sopa" class="promo-img">
+          <span class="price-tag">C$ 200</span>
+      </div>
+      <div class="promo-card">
+          <h3>¡Descubre la Promoción del Día!</h3>
+          <p>Disfruta Buenos Momentos a domicilio</p>
+          <div class="big-phone">1900-2020</div>
+      </div>
+  </section>
+
+  <script>
+      let carrito = [];
+
+      function limpiarPantalla() {
+          const ids = ['contenido-inicio', 'contenido-nosotros', 'contenido-menu', 'contenido-contacto', 'contenido-canasta', 'seccion-promos'];
+          ids.forEach(id => {
+              const el = document.getElementById(id);
+              if(el) el.style.display = 'none';
+          });
+      }
+
+      function mostrarInicio() {
+          limpiarPantalla();
+          document.getElementById('contenido-inicio').style.display = 'block';
+          document.getElementById('seccion-promos').style.display = 'flex';
+      }
+
+      function mostrarNosotros() {
+          limpiarPantalla();
+          document.getElementById('contenido-nosotros').style.display = 'block';
+      }
+
+      function mostrarMenu() {
+          limpiarPantalla();
+          document.getElementById('contenido-menu').style.display = 'block';
+      }
+
+      function mostrarContacto() {
+          limpiarPantalla();
+          document.getElementById('contenido-contacto').style.display = 'block';
+      }
+
+      // LA CONEXIÓN SOLO OCURRE AQUÍ
+      async function mostrarCanasta() {
+          limpiarPantalla();
+          document.getElementById('contenido-canasta').style.display = 'block';
+          const select = document.getElementById('selectPlatillo');
+          
+          try {
+              const res = await fetch('/platillos');
+              const platillos = await res.json();
+              select.innerHTML = "";
+              platillos.forEach(p => {
+                  select.innerHTML += `<option value="${p.id_platillo}" data-precio="${p.precio}">${p.nombre_platillo} - C$ ${p.precio}</option>`;
+              });
+          } catch (e) {
+              select.innerHTML = "<option>Error al conectar con Azure</option>";
+          }
+      }
+
+      function agregarAlCarrito() {
+          const select = document.getElementById('selectPlatillo');
+          const option = select.options[select.selectedIndex];
+          if (!option || !select.value) return;
+
+          const id_platillo = select.value;
+          const nombre = option.text.split(' - ')[0];
+          const precio = parseFloat(option.getAttribute('data-precio'));
+          const cantidad = parseInt(document.getElementById('cantPlatillo').value);
+
+          carrito.push({ id_platillo, nombre, precio, cantidad, subtotal: precio * cantidad });
+          renderCarrito();
+      }
+
+      function renderCarrito() {
+          const body = document.getElementById('body-carrito');
+          let total = 0;
+          body.innerHTML = "";
+          carrito.forEach(item => {
+              total += item.subtotal;
+              body.innerHTML += `<tr><td>${item.nombre}</td><td>C$ ${item.precio}</td><td>${item.cantidad}</td><td>C$ ${item.subtotal}</td></tr>`;
+          });
+          document.getElementById('total-canasta').innerText = total;
+      }
+
+      async function finalizarVenta() {
+    if (carrito.length === 0) return alert("La canasta está vacía");
+
+    // Calculamos el total antes de enviar
+    const totalVenta = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+
+    const datosVenta = {
+        total_venta: totalVenta,
+        metodo_pago: "Efectivo",
+        id_usuario: 1, // ID del cajero admin por defecto
+        productos: carrito.map(item => ({
+            id_platillo: item.id_platillo,
+            cantidad: item.cantidad,
+            subtotal: item.subtotal
+        }))
+    };
+
+    try {
+        const response = await fetch('/guardar-venta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosVenta)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert("¡Venta registrada con éxito!");
+            carrito = [];
+            renderCarrito();
+            mostrarInicio();
+        } else {
+            alert("Error al guardar: " + data.error);
+        }
+    } catch (e) {
+        alert("Error al conectar con el servidor.");
+    }
+}
+
+  </script>
+</body>
+</html>
