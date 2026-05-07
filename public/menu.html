@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Principal - Como en Casa</title>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', Arial, sans-serif; background: #f3f3f3; }
+        .header {
+            width: 100%; background: white; display: flex; align-items: center;
+            justify-content: center; padding: 25px; min-height: 120px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative;
+        }
+        .header img { width: 90px; position: absolute; left: 25px; }
+        .header h2 { font-size: 26px; color: #333; margin: 0; }
+        .content { margin-top: 70px; display: flex; justify-content: center; width: 100%; }
+        .cards { display: grid; grid-template-columns: repeat(2, 260px); gap: 35px; }
+        .card {
+            background: white; padding: 30px; text-align: center; border-radius: 12px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: 0.3s; color: #333; font-size: 18px;
+        }
+        .card:hover { transform: translateY(-5px); background: #e8f5e9; color: #4CAF50; }
+        .logout { grid-column: span 2; background: #fff5f5; color: #e30613; border: 1px solid #ffcccc; }
+        .logout:hover { background: #e30613; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="logo.png" alt="Logo">
+        <h2>Menú Principal</h2>
+    </div>
+
+    <div class="content">
+        <div class="cards">
+            <div class="card" onclick="window.location.href='/platillos.html'">
+                🍽️ Gestión de Platillos
+            </div>
+
+            <div class="card" onclick="window.location.href='/ventas.html'">
+                💰 Módulo de Ventas
+            </div>
+
+            <div class="card logout" onclick="cerrarSesion()">
+                ❌ Cerrar sesión
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function cerrarSesion() {
+            localStorage.clear(); // Limpia el ID de usuario
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>
