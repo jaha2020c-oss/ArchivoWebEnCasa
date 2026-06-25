@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard General - Como en Casa</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root { --primary: #4CAF50; --secondary: #e30613; --bg: #f4f7f6; --dark: #333; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); display: flex; }
+        
+        .sidebar { 
+            width: 260px; height: 100vh; background: white; padding: 20px; 
+            position: fixed; box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
+            display: flex; flex-direction: column; box-sizing: border-box;
+        }
+        .logo { width: 100px; margin: 0 auto 20px; display: block; }
+        .menu-item { 
+            padding: 15px; border-radius: 8px; cursor: pointer; 
+            color: #555; margin-bottom: 5px; transition: 0.3s; font-weight: 500;
+            text-decoration: none; display: block;
+        }
+        .menu-item:hover { background: #f0f0f0; }
+        .menu-item.active { background: var(--primary); color: white; }
+        
+        .menu-item.volver {
+            margin-top: auto; color: var(--secondary); border: 2px solid var(--secondary);
+            text-align: center; font-weight: bold; display: flex; align-items: center;
+            justify-content: center; text-decoration: none;
+        }
+        .menu-item.volver:hover { background: var(--secondary); color: white; }
+
+        .content { margin-left: 260px; padding: 40px; width: 100%; box-sizing: border-box; }
+        
+        /* Filtros de Tiempo */
+        .filtros-tiempo { margin-bottom: 25px; display: flex; gap: 10px; }
+        .btn-filtro { padding: 10px 20px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: #555; }
+        .btn-filtro.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card-kpi { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid #ccc; }
+        .kpi-title { color: #888; font-size: 13px; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; display: block; }
+        .kpi-value { font-size: 28px; font-weight: bold; color: var(--dark); }
+        
+        .kpi-ingresos { border-left-color: var(--primary); }
+        .kpi-ordenes { border-left-color: #0d47a1; }
+        .kpi-estrella { border-left-color: #ff9800; }
+        .kpi-alertas { border-left-color: var(--secondary); }
+        .kpi-alertas .critico { color: var(--secondary); }
+
+        .charts-container { display: grid; grid-template-columns: 1fr 400px; gap: 25px; }
+        .chart-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .chart-card h3 { margin-top: 0; color: #444; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        
+        /* Tabla de Platillos Top */
+        .tabla-top { width: 100%; border-collapse: collapse; }
+        .tabla-top th, .tabla-top td { padding: 10px; text-align: left; font-size: 14px; border-bottom: 1px solid #eee; }
+        .tabla-top th { background: #f9f9f9; color: #666; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <img src="logo.png" alt="Logo" class="logo">
+        <a href="/dashboard" class="menu-item active">📊 Dashboard General</a>
+        <a href="/historial-ventas" class="menu-item">📋 Historial de Ventas</a>
+        <a href="/platillos-admin" class="menu-item">🍲 Administrar Platillos</a>
+        <div class="menu-item volver" onclick="location.href='/menu'">↩ VOLVER AL MENÚ</div>
+    </div>
+
+    <div class="content">
+        <h2>Panel de Control Administrativo</h2>
+        
+        <div class="filtros-tiempo">
+            <button class="btn-filtro active" onclick="cambiarPeriodo('hoy', this)">Hoy</button>
+            <button class="btn-filtro" onclick="cambiarPeriodo('semana', this)">Semana</button>
+            <button class="btn-filtro" onclick="cambiarPeriodo('mes', this)">Mes</button>
+        </div>
+        
+        <div class="kpi-container">
+            <div class="card-kpi kpi-ingresos">
+                <span class="kpi-title">Ingresos del Periodo</span>
+                <span class="kpi-value" id="kpiIngresos">C$ 0.00</span>
+            </div>
+            <div class="card-kpi kpi-ordenes">
+                <span class="kpi-title">Órdenes del Periodo</span>
+                <span class="kpi-value" id="kpiOrdenes">0</span>
+            </div>
+            <div class="card-kpi kpi-estrella">
+                <span class="kpi-title">Platillo Estrella</span>
+                <span class="kpi-value" id="kpiEstrella" style="font-size: 18px; display:block; margin-top:5px;">Cargando...</span>
+            </div>
+            <div class="card-kpi kpi-alertas">
+                <span class="kpi-title">Alertas de Stock (&le;5)</span>
+                <span class="kpi-value" id="kpiAlertas">0</span>
+            </div>
+        </div>
+
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3>Ranking de Ventas y Ganancias por Platillo</h3>
+                <table class="tabla-top">
+                    <thead>
+                        <tr>
+                            <th>Platillo</th>
+                            <th>Unidades Vendidas</th>
+                            <th style="text-align: right;">Ganancia Bruta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaPlatillosTop">
+                        <tr><td colspan="3" style="text-align:center; color:#888;">Cargando datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="chart-card">
+                <h3>Preferencia de Métodos de Pago</h3>
+                <div style="position: relative; height: 230px; width: 100%;">
+                    <canvas id="chartMetodosPago"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let periodoActual = 'hoy';
+        let miGrafico = null;
+
+        function cambiarPeriodo(periodo, boton) {
+            periodoActual = periodo;
+            document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
+            boton.classList.add('active');
+            cargarDashboard();
+        }
+
+        async function cargarDashboard() {
+            try {
+                // 1. Cargar métricas dinámicas según el período seleccionado
+                const resMetricas = await fetch(`/api/dashboard/metricas?periodo=${periodoActual}`);
+                const metricas = await resMetricas.json();
+                
+                document.getElementById('kpiIngresos').innerText = `C$ ${parseFloat(metricas.ingresos).toFixed(2)}`;
+                document.getElementById('kpiOrdenes').innerText = metricas.ordenes;
+                document.getElementById('kpiEstrella').innerText = metricas.platilloEstrella;
+                
+                const alertasElement = document.getElementById('kpiAlertas');
+                alertasElement.innerText = metricas.alertasStock;
+                if(metricas.alertasStock > 0) alertasElement.classList.add('critico');
+
+                // 2. Cargar la lista completa de ventas y ganancias del ranking
+                const resRanking = await fetch(`/api/dashboard/ranking-platillos?periodo=${periodoActual}`);
+                const ranking = await resRanking.json();
+                const tbody = document.getElementById('tablaPlatillosTop');
+                
+                if(!ranking || ranking.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888; font-style:italic;">No se registran ventas en este rango de tiempo.</td></tr>`;
+                } else {
+                    tbody.innerHTML = '';
+                    ranking.forEach(p => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><strong>${p.nombre_platillo}</strong></td>
+                                <td>${p.total_vendido} unidades</td>
+                                <td style="text-align: right; color: var(--primary); font-weight: bold;">C$ ${p.ganancia_total.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                // 3. Cargar métodos de pago según el periodo
+                const resMetodos = await fetch(`/api/dashboard/metodos-pago?periodo=${periodoActual}`);
+                const datosMetodos = await resMetodos.json();
+                
+                const labels = datosMetodos.map(item => item.metodo_pago);
+                const valores = datosMetodos.map(item => item.cantidad);
+                
+                const ctx = document.getElementById('chartMetodosPago').getContext('2d');
+                if (miGrafico) miGrafico.destroy(); // Limpiar gráfico anterior antes de actualizar
+                
+                miGrafico = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: valores,
+                            backgroundColor: ['#4CAF50', '#e30613', '#0d47a1', '#ff9800'],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error cargando dashboard:", error);
+                Swal.fire('Error', 'No se pudieron extraer los reportes filtrados.', 'error');
+            }
+        }
+
+        window.onload = cargarDashboard;
+    </script>
+</body>
+</html>
