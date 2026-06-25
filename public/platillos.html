@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Platillos - Como en Casa</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { --primary: #4CAF50; --secondary: #e30613; --danger: #ff4d4d; --bg: #f4f7f6; --text: #333; --sidebar-white: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: var(--bg); display: flex; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; height: 100vh; background: var(--sidebar-white); box-shadow: 2px 0 10px rgba(0,0,0,0.1); position: fixed; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; z-index: 100; }
+        .logo-container { text-align: center; margin-bottom: 30px; }
+        .logo-container img { width: 120px; }
+        .panel-title { font-size: 1.1rem; font-weight: bold; color: var(--text); text-align: center; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); }
+        .menu-item { padding: 12px 15px; border-radius: 8px; cursor: pointer; transition: all 0.3s; color: #555; font-weight: 500; margin-bottom: 8px; display: flex; align-items: center; }
+        .menu-item:hover { background: #e8f5e9; color: var(--primary); }
+        .menu-item.active { background: var(--primary); color: white; }
+        .menu-item.volver { margin-top: auto; color: var(--secondary); border: 2px solid var(--secondary); justify-content: center; font-weight: bold; }
+        .menu-item.volver:hover { background: var(--secondary); color: white; }
+
+        /* Contenido */
+        .main-content { margin-left: 260px; padding: 40px; width: 100%; box-sizing: border-box; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #f8f9fa; padding: 15px; text-align: left; border-bottom: 2px solid #eee; color: #666; }
+        td { padding: 15px; border-bottom: 1px solid #eee; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { border: 1px solid var(--primary); color: var(--primary); background: none; }
+        
+        /* Botón de descripción de la tabla */
+        .btn-desc { background: #e8f5e9; color: var(--primary); border: 1px solid var(--primary); padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-desc:hover { background: var(--primary); color: white; }
+
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 8px; width: 100%; margin-bottom: 15px; box-sizing: border-box; }
+        input[readonly], input[disabled] { background-color: #f0f0f0; color: #666; cursor: not-allowed; }
+        
+        .status-pill { padding: 5px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; display: inline-block; width: 100px; text-align: center; }
+        .status-on { background: #e8f5e9; color: #2e7d32; }
+        .status-off { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo-container"><img src="logo.png" alt="Logo"></div>
+        <div class="panel-title">ADMINISTRACIÓN</div>
+        <div class="menu-item active" id="btn-ver" onclick="showSection('ver')">📋 Inventario</div>
+        <div class="menu-item" id="btn-editar" onclick="showSection('editar')">✏️ Editar a Menú</div>
+        <div class="menu-item volver" onclick="location.href='/menu.html'">↩ VOLVER AL MENÚ</div>
+    </div>
+
+    <div class="main-content">
+        <div class="card" id="content-area"></div>
+    </div>
+
+    <script>
+        let currentOrder = 'DESC';
+
+        // Diccionario maestro de descripciones integradas
+        const DESCRIPCIONES_MAP = {
+            "Gallo pinto con huevo revuelto": "El rey de nuestras mañanas. Nuestro gallo pinto bien frito, acompañado de huevos revueltos al gusto, una tajada de queso fresco y maduro frito.",
+            "Panqueques": "Una pila de panqueques esponjosos, doraditos en la plancha y bañados con miel de abeja y duraznos.",
+            "Quesadillas": "Tortillas de maíz calientitas y palmeadas, rellenas de pollo y abundante queso quesillo derretido a la plancha. Crujientes por fuera y suaves por dentro.",
+            "Nacatamal": "Masa de maíz sazonada con naranja agria, manteca de cerdo, arroz, papas, pasas y una jugosa posta de cerdo, todo envuelto con amor en hoja de plátano.",
+            "Filete de pollo": "Jugosa pechuga de pollo marinada con naranja agria y ajo, cocinada a la plancha. Servida con su respectiva ración de papas cocidas y brócoli.",
+            "Churrasco de Res": "Un corte selecto de carne de res suave y jugosa, asada a la perfección. Acompañado de arroz, maduro frito, un toque de chimichurri casero y ensalada criolla.",
+            "Sopa de pescado": "Un delicioso y reconfortante caldo marinero con el toque del mar nicaragüense. Preparada con pescado fresco, verduras de la temporada (quisquiza, yuca, plátano) y un toque de leche de coco para levantar el ánimo.",
+            "Tres leches": "Un bizcocho tierno y sumamente húmedo, bañado en nuestra mezcla especial de tres leches. Decorado con crema batida ligera, un toque de canela y frescura.",
+            "Crepas": "Una masa delgada y suave rellena de frescas rodajas de fruta y cremoso chocolate. Decorada con un delicado decorado de sirope y un toque artesanal.",
+            "Brownie": "Un cuadrado denso de intenso cacao horneado con trozos crujientes de nuez. Acompañado de un fino hilo de chocolate fundido y una textura realmente irresistible.",
+            "Gallopinto": "Una mezcla tradicional de arroz y frijoles salteados con vegetales frescos y especias.",
+            "Queso asado": "Una rodaja gruesa de queso fresco dorada a la plancha hasta obtener una textura crujiente.",
+            "Tajadas de Plátano Maduro": "Láminas de plátano maduro fritas hasta alcanzar un punto dulce y dorado perfecto.",
+            "Coca Cola": "La Coca Cola clásica, ideal para refrescar cualquier comida.",
+            "Cacao": "Nuestro orgullo en vaso. Un refresco tradicional y espeso a base de puro cacao nicaragüense molido con arroz, leche entera, canela y mucho hielo.",
+            "Vaso de agua": "Agua purificada."
+        };
+
+        function showSection(section) {
+            document.querySelectorAll('.menu-item').forEach(btn => btn.classList.remove('active'));
+            if(document.getElementById(`btn-${section}`)) document.getElementById(`btn-${section}`).classList.add('active');
+            
+            const area = document.getElementById('content-area');
+            if (section === 'ver') renderVer(area);
+            if (section === 'editar') renderEditar(area);
+        }
+
+        async function renderVer(container) {
+            container.innerHTML = `
+                <h2>Inventario General</h2>
+                <p style="color: #777; margin-bottom: 15px;">Catálogo maestro de productos en base de datos.</p>
+                <table id="tabla-ver">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th style="width: 150px;">Información</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lista-p"></tbody>
+                </table>`;
+                
+            const res = await fetch(`/platillos?orden=${currentOrder}`);
+            const data = await res.json();
+            
+            document.getElementById('lista-p').innerHTML = data.map(p => {
+                const nombreLimpio = p.nombre_platillo.trim();
+                return `
+                <tr>
+                    <td><strong>${nombreLimpio}</strong><br><small style="color:#777;">${p.tipo}</small></td>
+                    <td>
+                        <button class="btn-desc" onclick="mostrarPopupDescripcion('${nombreLimpio}')">Descripción</button>
+                    </td>
+                <td><strong>C$ ${p.precio.toFixed(2)}</strong></td>
+
+                <td>
+                 ${p.stock_actual} / ${p.stock_maximo}
+                </td>
+
+                <td>
+                 <span class="status-pill ${p.disponible ? 'status-on' : 'status-off'}">
+                     ${p.disponible ? 'Disponible' : 'Agotado'}
+                  </span>
+                </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function mostrarPopupDescripcion(nombrePlatillo) {
+            const descripcion = DESCRIPCIONES_MAP[nombrePlatillo] || "Platillo típico preparado diariamente con ingredientes frescos seleccionados.";
+            
+            Swal.fire({
+                title: nombrePlatillo,
+                text: descripcion,
+                icon: 'info',
+                confirmButtonColor: '#4CAF50',
+                confirmButtonText: 'Entendido'
+            });
+        }
+
+        function renderEditar(container) {
+            container.innerHTML = `<h2>Editar Disponibilidad en Menú</h2><p style="color: #777; margin-bottom: 15px;">Busca y selecciona un platillo para habilitar o deshabilitar su venta al cliente.</p><input type="text" id="busq" placeholder="Buscar platillo..." oninput="buscar()">
+                <div id="res-busq"></div>`;
+            buscar();
+        }
+
+        async function buscar() {
+            const q = document.getElementById('busq').value;
+            const res = await fetch(`/platillos/buscar?nombre=${q}`);
+            const data = await res.json();
+            document.getElementById('res-busq').innerHTML = `<table>${data.map(p => `
+                <tr><td><strong>${p.nombre_platillo}</strong> <small>(${p.tipo})</small></td>
+                <td><button class="btn btn-outline" onclick="formEditar(
+    ${p.id_platillo},
+    '${p.nombre_platillo}',
+    '${p.tipo}',
+    ${p.precio},
+    ${p.disponible},
+    ${p.stock_actual},
+    ${p.stock_maximo}
+)">Seleccionar</button></td></tr>`).join('')}</table>`;
+        }
+
+        function formEditar(id, nombre, tipo, precio, disponible, stock_actual, stock_maximo) {
+            document.getElementById('content-area').innerHTML = `
+                <h2>Modificar Disponibilidad: ${nombre}</h2>
+                <form onsubmit="handleEditar(event, ${id})">
+                    <label style="font-weight: bold; color: #555;">Nombre del Platillo (No editable):</label>
+                    <input type="text" id="ed_n" value="${nombre}" readonly disabled>
+                    
+                    <label style="font-weight: bold; color: #555;">Tipo (No editable):</label>
+                    <input type="text" id="ed_t" value="${tipo}" readonly disabled>
+                    
+                    <label style="font-weight: bold; color: #555;">Precio Base (No editable):</label>
+                    <input type="number" id="ed_p" step="0.01" value="${precio}" readonly disabled>
+                    
+                    <label style="font-weight: bold; color: #555;">Stock Disponible:</label>
+                        <input type="text"
+                        value="${stock_actual} / ${stock_maximo}"
+                       readonly
+                         disabled>
+                    <label style="font-weight: bold; color: #555; display: block; margin-bottom: 5px;">Estado en Canasta:</label>
+                    <select id="ed_d">
+                        <option value="Disponible" ${disponible ? 'selected' : ''}>✅ Disponible (Permitir compra)</option>
+                        <option value="No disponible" ${!disponible ? 'selected' : ''}>❌ Agotado (Ocultar de la Canasta)</option>
+                    </select>
+                    
+                    <button type="submit" class="btn btn-primary">Actualizar Estado</button>
+                    <button type="button" class="btn btn-outline" style="margin-left: 10px;" onclick="showSection('editar')">Cancelar</button>
+                </form>`;
+        }
+
+        async function handleEditar(e, id) {
+            e.preventDefault();
+            const seleccionEstado = document.getElementById('ed_d').value;
+            const nombrePlatillo = document.getElementById('ed_n').value;
+            
+            const payload = { 
+                id, 
+                nombre: nombrePlatillo, 
+                tipo: document.getElementById('ed_t').value, 
+                precio: document.getElementById('ed_p').value, 
+                disponible: seleccionEstado 
+            };
+            
+            const response = await fetch('/editarPlatillo', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify(payload) 
+            });
+            
+            if(response.ok) {
+                Swal.fire({
+                    title: '¡Estado Actualizado!',
+                    html: `El platillo <strong>${nombrePlatillo}</strong> ahora está configurado como <strong>${seleccionEstado}</strong> en el sistema de la canasta.`,
+                    icon: 'success',
+                    confirmButtonColor: '#4CAF50',
+                    confirmButtonText: 'Aceptar'
+                });
+                showSection('ver');
+            } else {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'No se pudo actualizar el estado en el backend de Azure SQL.',
+                    icon: 'error',
+                    confirmButtonColor: '#e30613'
+                });
+            }
+        }
+
+        window.onload = () => showSection('ver');
+    </script>
+</body>
+</html>
