@@ -1,0 +1,11 @@
+-- Desactivar RLS en todas las tablas para permitir acceso directo desde la API
+ALTER TABLE platillos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios DISABLE ROW LEVEL SECURITY;
+ALTER TABLE ventas DISABLE ROW LEVEL SECURITY;
+ALTER TABLE detalle_ventas DISABLE ROW LEVEL SECURITY;
+
+-- Otorgar permisos explícitos a los roles de Supabase
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
