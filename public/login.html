@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Administrador - Como en Casa</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #e30613; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .login-box { background: white; width: 350px; max-width: 100%; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; box-sizing: border-box; }
+        .logo { width: 120px; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button.principal { width: 100%; padding: 15px; background: #e30613; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button.principal:hover { background: #c10510; }
+        button.principal:disabled { background: #bbb; cursor: not-allowed; }
+        .enlace { display: block; margin-top: 18px; color: #999; text-decoration: none; font-size: 14px; cursor: pointer; background: none; border: none; width: 100%; padding: 0; font-family: inherit; }
+        .enlace.rojo { color: #e30613; font-weight: bold; font-size: 13px; margin-top: 12px; }
+        .enlace:disabled { color: #bbb; cursor: not-allowed; }
+        #msgError { color: red; font-size: 14px; margin-bottom: 10px; display: none; padding: 10px; background: #ffebee; border-radius: 5px; }
+        #msgError.ok { color: #1b5e20; background: #e8f5e9; }
+        .ayuda { font-size: 14px; color: #666; margin: 4px 0 8px; }
+        #recCodigo { text-align: center; letter-spacing: 8px; font-size: 22px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <img src="logo.png" alt="Logo" class="logo">
+        <div id="msgError"></div>
+
+        <!-- Vista 1: inicio de sesión -->
+        <div id="vistaLogin">
+            <h2>Administración</h2>
+            <input type="text" id="userInput" placeholder="Usuario (admin)">
+            <input type="password" id="passInput" placeholder="Contraseña">
+
+            <button class="principal" onclick="realizarLogin()">ENTRAR</button>
+            <a href="/" class="enlace">← Volver al Menú</a>
+            <button class="enlace rojo" onclick="mostrarRecuperar()">Recuperar contraseña</button>
+        </div>
+
+        <!-- Vista 2: recuperar contraseña (3 pasos) -->
+        <div id="vistaRecuperar" style="display:none;">
+            <h2>Recuperar contraseña</h2>
+
+            <div id="paso1">
+                <p class="ayuda">Escribe el correo registrado y te enviaremos un código de 6 dígitos.</p>
+                <input type="email" id="recEmail" placeholder="Correo electrónico" autocomplete="email">
+                <button class="principal" id="btnEnviar" onclick="enviarCodigo()">ENVIAR CÓDIGO</button>
+            </div>
+
+            <div id="paso2" style="display:none;">
+                <p class="ayuda">Enviamos un código a <b id="recCorreoTxt"></b>. Vence en 10 minutos.</p>
+                <input type="text" id="recCodigo" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+                <button class="principal" id="btnVerificar" onclick="verificarCodigo()">VERIFICAR CÓDIGO</button>
+                <button class="enlace" id="btnReenviar" onclick="enviarCodigo(true)">Reenviar código</button>
+            </div>
+
+            <div id="paso3" style="display:none;">
+                <p class="ayuda">Código verificado. Escribe tu nueva contraseña (mínimo 8 caracteres).</p>
+                <input type="password" id="recNueva" placeholder="Nueva contraseña" autocomplete="new-password">
+                <input type="password" id="recConfirmar" placeholder="Confirmar contraseña" autocomplete="new-password">
+                <button class="principal" id="btnCambiar" onclick="cambiarClave()">CAMBIAR CONTRASEÑA</button>
+            </div>
+
+            <button class="enlace" onclick="mostrarLogin()">← Volver al inicio de sesión</button>
+        </div>
+    </div>
+
+<script>
+    const msg = document.getElementById("msgError");
+
+    function mostrarMensaje(texto, ok) {
+        msg.innerText = texto;
+        msg.className = ok ? "ok" : "";
+        msg.style.display = "block";
+    }
+    function ocultarMensaje() { msg.style.display = "none"; }
+
+    /* ---------- Inicio de sesión ---------- */
+    async function realizarLogin() {
+        const user = document.getElementById("userInput").value;
+        const pass = document.getElementById("passInput").value;
+        ocultarMensaje();
+
+        try {
+            const response = await fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre_usuario: user, contrasena: pass })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                window.location.href = "/menu";
+            } else {
+                mostrarMensaje(result.mensaje, false);
+            }
+        } catch (e) {
+            mostrarMensaje("Error de conexión con el servidor", false);
+        }
+    }
+
+    ["userInput", "passInput"].forEach(id => {
+        document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") realizarLogin(); });
+    });
+
+    /* ---------- Recuperar contraseña ---------- */
+    let recEmail = "";
+    let recToken = "";
+    let temporizador = null;
+
+    function mostrarRecuperar() {
+        ocultarMensaje();
+        document.getElementById("vistaLogin").style.display = "none";
+        document.getElementById("vistaRecuperar").style.display = "block";
+        irAPaso(1);
+        document.getElementById("recEmail").focus();
+    }
+
+    function mostrarLogin() {
+        ocultarMensaje();
+        clearInterval(temporizador);
+        recToken = "";
+        document.getElementById("vistaRecuperar").style.display = "none";
+        document.getElementById("vistaLogin").style.display = "block";
+    }
+
+    function irAPaso(n) {
+        [1, 2, 3].forEach(i => document.getElementById("paso" + i).style.display = (i === n ? "block" : "none"));
+    }
+
+    async function llamar(ruta, datos) {
+        const res = await fetch(ruta, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(datos)
+        });
+        const json = await res.json().catch(() => ({}));
+        return { ok: res.ok && json.success, json };
+    }
+
+    // Evita pedir códigos seguidos: el botón "Reenviar" espera 60 segundos
+    function iniciarEspera() {
+        const boton = document.getElementById("btnReenviar");
+        let restante = 60;
+        boton.disabled = true;
+        clearInterval(temporizador);
+        temporizador = setInterval(() => {
+            restante--;
+            if (restante <= 0) {
+                clearInterval(temporizador);
+                boton.disabled = false;
+                boton.innerText = "Reenviar código";
+            } else {
+                boton.innerText = "Reenviar código (" + restante + " s)";
+            }
+        }, 1000);
+        boton.innerText = "Reenviar código (60 s)";
+    }
+
+    async function enviarCodigo(reenvio) {
+        ocultarMensaje();
+        const email = (reenvio ? recEmail : document.getElementById("recEmail").value).trim().toLowerCase();
+        if (!email) { mostrarMensaje("Escribe tu correo electrónico.", false); return; }
+
+        const boton = document.getElementById("btnEnviar");
+        boton.disabled = true;
+        try {
+            const r = await llamar("/recuperar/solicitar", { email });
+            if (r.ok) {
+                recEmail = email;
+                document.getElementById("recCorreoTxt").innerText = email;
+                document.getElementById("recCodigo").value = "";
+                irAPaso(2);
+                iniciarEspera();
+                mostrarMensaje(r.json.mensaje, true);
+                document.getElementById("recCodigo").focus();
+            } else {
+                mostrarMensaje(r.json.mensaje || "No se pudo enviar el código.", false);
+            }
+        } catch (e) {
+            mostrarMensaje("Error de conexión con el servidor", false);
+        }
+        boton.disabled = false;
+    }
+
+    async function verificarCodigo() {
+        ocultarMensaje();
+        const codigo = document.getElementById("recCodigo").value.replace(/\D/g, "");
+        if (codigo.length !== 6) { mostrarMensaje("Escribe el código de 6 dígitos.", false); return; }
+
+        const boton = document.getElementById("btnVerificar");
+        boton.disabled = true;
+        try {
+            const r = await llamar("/recuperar/verificar", { email: recEmail, codigo });
+            if (r.ok) {
+                recToken = r.json.token;
+                clearInterval(temporizador);
+                irAPaso(3);
+                document.getElementById("recNueva").focus();
+            } else {
+                mostrarMensaje(r.json.mensaje || "No se pudo verificar el código.", false);
+            }
+        } catch (e) {
+            mostrarMensaje("Error de conexión con el servidor", false);
+        }
+        boton.disabled = false;
+    }
+
+    async function cambiarClave() {
+        ocultarMensaje();
+        const nueva = document.getElementById("recNueva").value;
+        const confirmar = document.getElementById("recConfirmar").value;
+        if (nueva.length < 8) { mostrarMensaje("La contraseña debe tener al menos 8 caracteres.", false); return; }
+        if (nueva !== confirmar) { mostrarMensaje("Las contraseñas no coinciden.", false); return; }
+
+        const boton = document.getElementById("btnCambiar");
+        boton.disabled = true;
+        try {
+            const r = await llamar("/recuperar/cambiar", { token: recToken, nueva, confirmar });
+            if (r.ok) {
+                mostrarLogin();
+                document.getElementById("passInput").value = "";
+                mostrarMensaje(r.json.mensaje, true);
+            } else {
+                mostrarMensaje(r.json.mensaje || "No se pudo cambiar la contraseña.", false);
+            }
+        } catch (e) {
+            mostrarMensaje("Error de conexión con el servidor", false);
+        }
+        boton.disabled = false;
+    }
+</script>
+
+</body>
+</html>
