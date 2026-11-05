@@ -1,0 +1,269 @@
+-- 1. TABLA DE USUARIOS
+CREATE TABLE IF NOT EXISTS usuarios (
+    id_usuario SERIAL PRIMARY KEY,
+    nombre_usuario VARCHAR(50) NOT NULL UNIQUE,
+    contrasena VARCHAR(255) NOT NULL,
+    nombre_completo VARCHAR(100),
+    rol VARCHAR(20) DEFAULT 'admin',
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Usuario inicial de administración
+INSERT INTO usuarios (nombre_usuario, contrasena, nombre_completo, rol)
+VALUES ('admin', '23456789', 'Administrador Principal', 'admin')
+ON CONFLICT (nombre_usuario) DO UPDATE SET contrasena = EXCLUDED.contrasena;
+
+-- 2. TABLA DE PLATILLOS (IMÁGENES Y DESCRIPCIONES LOCALES)
+CREATE TABLE IF NOT EXISTS platillos (
+    id_platillo SERIAL PRIMARY KEY,
+    nombre_platillo VARCHAR(150) NOT NULL UNIQUE,
+    tipo VARCHAR(50) NOT NULL,
+    precio NUMERIC(10,2) NOT NULL CHECK (precio >= 0),
+    stock_actual INT DEFAULT 0 CHECK (stock_actual >= 0),
+    stock_maximo INT DEFAULT 100 CHECK (stock_maximo >= 0),
+    disponible BOOLEAN DEFAULT TRUE,
+    imagen_url VARCHAR(255),
+    descripcion TEXT
+);
+
+-- Inserción de platillos con imágenes PNG y descripciones
+INSERT INTO platillos (nombre_platillo, tipo, precio, stock_actual, stock_maximo, disponible, imagen_url, descripcion) VALUES
+('Gallo pinto con huevo revuelto', 'Desayuno', 120.00, 50, 50, TRUE, 'Gallopintoyhuevo.png', 'El rey de nuestras mañanas. Nuestro gallo pinto bien frito, acompañado de huevos revueltos al gusto, una tajada de queso fresco y maduro frito.'),
+('Panqueques', 'Desayuno', 90.00, 30, 30, TRUE, 'Panqueques.png', 'Una pila de panqueques esponjosos, doraditos en la plancha y bañados con miel de abeja y duraznos.'),
+('Quesadillas', 'Desayuno', 110.00, 40, 40, TRUE, 'Quesadillas.png', 'Tortillas de maíz calientitas y palmeadas, rellenas de pollo y abundante queso quesillo derretido a la plancha.'),
+('Nacatamal', 'Desayuno', 130.00, 25, 25, TRUE, 'Nacatamal.png', 'Masa de maíz sazonada con naranja agria, manteca de cerdo, arroz, papas, pasas y una jugosa posta de cerdo, todo envuelto en hoja de plátano.'),
+('Filete de pollo', 'Almuerzo', 160.00, 35, 35, TRUE, 'Filete de pollo.png', 'Jugosa pechuga de pollo marinada con naranja agria y ajo, cocinada a la plancha. Servida con papas cocidas y brócoli.'),
+('Churrasco de Res', 'Almuerzo', 220.00, 30, 30, TRUE, 'Churrasco de Res.png', 'Un corte selecto de carne de res suave y jugosa, asada a la perfección. Acompañado de arroz, maduro frito y chimichurri.'),
+('Sopa de pescado', 'Almuerzo', 180.00, 20, 20, TRUE, 'Sopadepescado.png', 'Caldo marinero con el toque del mar nicaragüense. Preparada con pescado fresco, verduras y leche de coco.'),
+('Tres leches', 'Postre', 85.00, 25, 25, TRUE, 'Tresleches.png', 'Bizcocho tierno y húmedo, bañado en nuestra mezcla especial de tres leches y canela.'),
+('Crepas', 'Postre', 95.00, 20, 20, TRUE, 'Crepas.png', 'Masa delgada y suave rellena de frescas rodajas de fruta y cremoso chocolate.'),
+('Brownie', 'Postre', 75.00, 15, 15, TRUE, 'Brownie.png', 'Cuadrado denso de intenso cacao horneado con trozos crujientes de nuez.'),
+('Gallopinto', 'Acompañamiento', 40.00, 60, 60, TRUE, 'Gallopintosolo.png', 'Mezcla tradicional de arroz y frijoles salteados con vegetales frescos y especias.'),
+('Queso asado', 'Acompañamiento', 50.00, 45, 45, TRUE, 'Quesoasado.png', 'Rodaja gruesa de queso fresco dorada a la plancha hasta obtener una textura crujiente.'),
+('Tajadas de Plátano Maduro', 'Acompañamiento', 35.00, 50, 50, TRUE, 'Tajadasplatanomaduro.png', 'Láminas de plátano maduro fritas hasta alcanzar un punto dulce y dorado perfecto.'),
+('Coca Cola', 'Bebida', 35.00, 100, 100, TRUE, 'CocaCola.png', 'La Coca Cola clásica, ideal para refrescar cualquier comida.'),
+('Cacao', 'Bebida', 50.00, 80, 80, TRUE, 'Cacao.png', 'Refresco tradicional y espeso a base de puro cacao nicaragüense molido con arroz, leche entera, canela y mucho hielo.'),
+('Vaso de agua', 'Bebida', 15.00, 200, 200, TRUE, 'Vasodeagua.png', 'Agua purificada.')
+ON CONFLICT (nombre_platillo) DO UPDATE SET 
+    imagen_url = EXCLUDED.imagen_url,
+    descripcion = EXCLUDED.descripcion;
+
+-- 3. TABLAS DE VENTAS Y DETALLES
+CREATE TABLE IF NOT EXISTS ventas (
+    id_venta SERIAL PRIMARY KEY,
+    fecha_venta TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    nombre_mostrar VARCHAR(100) DEFAULT 'Anónimo',
+    total_venta NUMERIC(10,2) DEFAULT 0.00,
+    metodo_pago VARCHAR(50) DEFAULT 'Efectivo'
+);
+
+CREATE TABLE IF NOT EXISTS detalle_ventas (
+    id_detalle SERIAL PRIMARY KEY,
+    id_venta INT NOT NULL REFERENCES ventas(id_venta) ON DELETE CASCADE,
+    id_platillo INT REFERENCES platillos(id_platillo) ON DELETE SET NULL,
+    nombre_platillo VARCHAR(150) NOT NULL,
+    cantidad INT NOT NULL CHECK (cantidad > 0),
+    precio NUMERIC(10,2) NOT NULL CHECK (precio >= 0),
+    subtotal NUMERIC(10,2) NOT NULL CHECK (subtotal >= 0)
+);
+
+-- 4. VISTA PARA MÉTRICAS DEL DASHBOARD
+CREATE OR REPLACE VIEW vista_dashboard_resumen AS
+SELECT 
+    COALESCE(SUM(total_venta), 0) AS ingresos_totales,
+    COUNT(id_venta) AS total_pedidos,
+    COALESCE(AVG(total_venta), 0) AS promedio_ticket
+FROM ventas;
+
+
+
+
+  ---- Actualizacion de permisos --------
+
+ALTER TABLE ventas ADD COLUMN IF NOT EXISTS codigo_acceso VARCHAR(40);
+CREATE INDEX IF NOT EXISTS idx_ventas_codigo_acceso ON ventas(codigo_acceso);
+NOTIFY pgrst, 'reload schema';
+
+
+UPDATE detalle_ventas d
+SET nombre_platillo = p.nombre_platillo
+FROM platillos p
+WHERE d.id_platillo = p.id_platillo
+  AND d.nombre_platillo = 'Platillo';
+
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+SELECT cron.schedule(
+  'reponer-stock-diario',
+  '0 6 * * *',
+  $$ UPDATE public.platillos SET stock_actual = stock_maximo, disponible = (stock_maximo > 0) $$
+);
+
+SELECT jobid, jobname, schedule, active FROM cron.job;
+
+
+
+
+
+
+---- Nuevos Reembolsos y costo ---
+
+---------------------------------------------------------------------
+ --PASO 1  -  Contraseña del administrador (Punto 1)--
+---------------------------------------------------------------------
+-- Pone la contraseña nueva del usuario "admin".
+-- Al hacer el primer inicio de sesión, el sistema la guarda CIFRADA
+-- automáticamente (ya no queda en texto plano en la base de datos).
+
+UPDATE usuarios
+SET contrasena = '9m8QWJSNtrDc7a.L'
+WHERE nombre_usuario = 'admin';
+
+-- IMPORTANTE: cuando hayas iniciado sesión una vez, borra este paso de tus
+-- notas, porque aquí aparece la contraseña escrita.
+
+
+---------------------------------------------------------------------
+-- PASO 2  -  Correo del administrador (Punto 6: recuperar contraseña)--
+---------------------------------------------------------------------
+-- REEMPLAZAR tucorreo@gmail.com por el Gmail del administrador, EN MINÚSCULAS.
+-- A ese correo llegará el código de 6 dígitos.
+
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email VARCHAR(150);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_email ON usuarios (email);
+
+UPDATE usuarios
+SET email = 'jaha2020c@gmail.com'
+WHERE nombre_usuario = 'admin';
+
+---------------------------------------------------------------------
+-- PASO 3  -  Costos de los platillos y ganancia (Punto 5)--
+---------------------------------------------------------------------
+-- 3.A  Columnas nuevas: costo de cada platillo, y el costo que quedó
+--      guardado en cada venta (así, si algún día cambia un costo, las
+--      ventas pasadas no cambian).
+ALTER TABLE platillos
+    ADD COLUMN IF NOT EXISTS costo NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo >= 0);
+
+ALTER TABLE detalle_ventas
+    ADD COLUMN IF NOT EXISTS costo_unitario NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (costo_unitario >= 0);
+
+-- 3.B  Costo de preparar cada platillo (la lista que enviaste).
+--      Si algún costo cambia, edita el número y vuelve a ejecutar.
+UPDATE platillos AS p
+SET costo = c.costo
+FROM (VALUES
+    ('Vaso de agua',                    5.00),
+    ('Cacao',                          20.00),
+    ('Coca Cola',                      10.00),
+    ('Tajadas de Plátano Maduro',      10.00),
+    ('Queso asado',                    15.00),
+    ('Gallopinto',                     10.00),
+    ('Brownie',                        30.00),
+    ('Crepas',                         40.00),
+    ('Tres leches',                    20.00),
+    ('Sopa de pescado',               80.00),
+    ('Churrasco de Res',              100.00),
+    ('Filete de pollo',                60.00),
+    ('Nacatamal',                      50.00),
+    ('Quesadillas',                    40.00),
+    ('Panqueques',                     40.00),
+    ('Gallo pinto con huevo revuelto', 40.00)
+) AS c(nombre, costo)
+WHERE p.nombre_platillo = c.nombre;
+
+-- 3.C  (OPCIONAL) Ventas que ya estaban registradas: se les asigna el costo
+--      ACTUAL de cada platillo para que la ganancia histórica también salga.
+UPDATE detalle_ventas AS d
+SET costo_unitario = p.costo
+FROM platillos AS p
+WHERE d.id_platillo = p.id_platillo
+  AND d.costo_unitario = 0;
+
+
+
+---------------------------------------------------------------------
+ -- PASO 4  -  Tabla de reembolsos (Puntos 2, 3 y 4) --
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reembolsos (
+    id_reembolso     SERIAL PRIMARY KEY,
+    id_venta         INT NOT NULL UNIQUE REFERENCES ventas(id_venta) ON DELETE CASCADE,
+    motivo           TEXT NOT NULL,
+    estado           VARCHAR(20) NOT NULL DEFAULT 'Pendiente'
+                     CHECK (estado IN ('Pendiente', 'Aceptado', 'Rechazado')),
+    fecha_solicitud  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_resolucion TIMESTAMPTZ
+);
+
+
+---------------------------------------------------------------------
+ -- PASO 5  -  Tabla de códigos de recuperación (Punto 6) --
+---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS password_resets (
+    id         SERIAL PRIMARY KEY,
+    email      VARCHAR(150) NOT NULL,
+    code       VARCHAR(100) NOT NULL,      -- se guarda la huella del código, no el código
+    expires_at TIMESTAMPTZ NOT NULL,
+    intentos   INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_resets_email ON password_resets (email);
+
+
+---------------------------------------------------------------------
+ -- PASO 6  -  Permisos de las tablas nuevas (igual que en Seguridad.txt) --
+---------------------------------------------------------------------
+ALTER TABLE reembolsos      DISABLE ROW LEVEL SECURITY;
+ALTER TABLE password_resets DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon;
+GRANT ALL ON ALL TABLES    IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+NOTIFY pgrst, 'reload schema';
+
+
+
+---------Revisison de tablas-----------
+
+-- A) Debe mostrar tu correo en la fila de "admin":
+SELECT id_usuario, nombre_usuario, email, rol, activo FROM usuarios;
+
+-- B) Ganancia por platillo (precio de venta - costo). Revisa que ningún
+--    platillo tenga costo 0 ni mayor que el precio:
+SELECT nombre_platillo, tipo, precio, costo,
+       precio - costo AS ganancia_unitaria,
+       ROUND((precio - costo) / precio * 100, 1) AS margen_pct
+FROM platillos
+ORDER BY tipo, nombre_platillo;
+
+
+-- C) Las tablas nuevas deben existir (aparecen vacías al inicio):
+SELECT COUNT(*) AS reembolsos FROM reembolsos;
+SELECT COUNT(*) AS codigos_pendientes FROM password_resets;
+
+
+
+=====================================================================
+ CONSULTAS ÚTILES (opcionales, para cuando las necesites)
+=====================================================================
+
+-- Ver las solicitudes de reembolso:
+SELECT r.id_venta, v.nombre_mostrar, v.total_venta, r.estado, r.motivo, r.fecha_solicitud
+FROM reembolsos r JOIN ventas v ON v.id_venta = r.id_venta
+ORDER BY r.fecha_solicitud DESC;
+
+-- Cambiar el costo de UN platillo (ejemplo):
+UPDATE platillos SET costo = 32.00 WHERE nombre_platillo = 'Queso asado';
+
+-- Cambiar el correo del administrador (ejemplo):
+UPDATE usuarios SET email = 'nuevo@gmail.com' WHERE nombre_usuario = 'admin';
+
+-- Borrar códigos de recuperación viejos:
+DELETE FROM password_resets WHERE expires_at < NOW();
+
+
+
