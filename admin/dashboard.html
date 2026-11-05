@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard General - Como en Casa</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="factura.js"></script>
+    
+    <style>
+        :root { --primary: #4CAF50; --secondary: #e30613; --bg: #f4f7f6; --dark: #333; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); display: flex; }
+        
+        .sidebar { 
+            width: 260px; height: 100vh; background: white; padding: 20px; 
+            position: fixed; box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
+            display: flex; flex-direction: column; box-sizing: border-box;
+        }
+        .logo { width: 100px; margin: 0 auto 20px; display: block; }
+        .menu-item { 
+            padding: 15px; border-radius: 8px; cursor: pointer; 
+            color: #555; margin-bottom: 5px; transition: 0.3s; font-weight: 500;
+            text-decoration: none; display: block;
+        }
+        .menu-item:hover { background: #f0f0f0; }
+        .menu-item.active { background: var(--primary); color: white; }
+        
+        .menu-item.volver {
+            margin-top: auto; color: var(--secondary); border: 2px solid var(--secondary);
+            text-align: center; font-weight: bold; display: flex; align-items: center;
+            justify-content: center; text-decoration: none;
+        }
+        .menu-item.volver:hover { background: var(--secondary); color: white; }
+
+        .content { margin-left: 260px; padding: 40px; width: 100%; box-sizing: border-box; }
+        
+        /* Filtros de Tiempo */
+        .filtros-tiempo { margin-bottom: 25px; display: flex; gap: 10px; }
+        .btn-filtro { padding: 10px 20px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: #555; }
+        .btn-filtro.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .dash-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 25px; align-items: start; }
+        .dash-main { min-width: 0; }
+
+        .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .kpi-sub { display: block; margin-top: 6px; font-size: 12px; color: #888; }
+        .card-kpi { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid #ccc; }
+        .kpi-title { color: #888; font-size: 13px; text-transform: uppercase; font-weight: bold; margin-bottom: 5px; display: block; }
+        .kpi-value { font-size: 28px; font-weight: bold; color: var(--dark); }
+        
+        .kpi-ingresos { border-left-color: var(--primary); }
+        .kpi-ganancia { border-left-color: #00897b; }
+        .kpi-ganancia .negativo { color: var(--secondary); }
+        .kpi-ordenes { border-left-color: #0d47a1; }
+        .kpi-estrella { border-left-color: #ff9800; }
+        .kpi-alertas { border-left-color: var(--secondary); }
+        .kpi-alertas .critico { color: var(--secondary); }
+
+        .charts-container { display: grid; grid-template-columns: 1.3fr 1fr; gap: 25px; }
+        .chart-card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .chart-card h3 { margin-top: 0; color: #444; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        
+        /* Tabla de Platillos Top */
+        .tabla-top { width: 100%; border-collapse: collapse; }
+        .tabla-top th, .tabla-top td { padding: 10px; text-align: left; font-size: 14px; border-bottom: 1px solid #eee; }
+        .tabla-top th { background: #f9f9f9; color: #666; }
+
+        /* Panel de facturas (derecha) */
+        .panel-facturas { background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px; position: sticky; top: 20px; max-height: calc(100vh - 40px); display: flex; flex-direction: column; box-sizing: border-box; }
+        .pf-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .pf-head h3 { margin: 0; color: #444; font-size: 17px; }
+        .pf-sub { margin: 4px 0 12px; font-size: 12px; color: #888; }
+        .pf-buscar { width: 100%; padding: 10px 14px; border: 2px solid #333; border-radius: 12px; font-size: 14px; box-sizing: border-box; margin-bottom: 10px; outline: none; }
+        .pf-buscar:focus { border-color: var(--primary); }
+        .pf-lista { overflow-y: auto; flex: 1; min-height: 120px; }
+        .pf-item { display: flex; align-items: center; gap: 8px; padding: 10px 2px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .pf-id { font-weight: bold; color: #888; min-width: 38px; }
+        .pf-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #333; }
+        .pf-fecha { display: block; font-size: 11px; color: #999; font-weight: normal; }
+        .btn-ver { background: #e3f2fd; color: #0d47a1; border: none; border-radius: 6px; padding: 6px 10px; font-weight: bold; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        .btn-ver:hover { background: #0d47a1; color: white; }
+        .btn-alerta { background: var(--secondary); color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-weight: bold; font-size: 15px; cursor: pointer; flex-shrink: 0; animation: pulso 1.6s infinite; }
+        .btn-alerta:hover { background: #a30410; }
+        @keyframes pulso { 0% { box-shadow: 0 0 0 0 rgba(227,6,19,0.5); } 70% { box-shadow: 0 0 0 8px rgba(227,6,19,0); } 100% { box-shadow: 0 0 0 0 rgba(227,6,19,0); } }
+        .tag-reemb { font-size: 11px; border-radius: 10px; padding: 3px 8px; font-weight: bold; white-space: nowrap; }
+        .tag-ok { background: #e8f5e9; color: #2e7d32; }
+        .tag-no { background: #eeeeee; color: #777; }
+        .badge-pend { background: var(--secondary); color: white; border-radius: 12px; font-size: 12px; font-weight: bold; padding: 3px 9px; }
+        .pf-vacio { text-align: center; color: #999; font-style: italic; padding: 25px 5px; font-size: 14px; }
+
+        @media (max-width: 1250px) {
+            .dash-layout { grid-template-columns: 1fr; }
+            .panel-facturas { position: static; max-height: none; }
+            .pf-lista { max-height: 420px; }
+        }
+        @media (max-width: 1050px) { .charts-container { grid-template-columns: 1fr; } }
+    </style>
+    <script>
+        // Si la sesión de administrador expira, volver al login
+        (function () {
+            const fetchOriginal = window.fetch;
+            window.fetch = async function (...args) {
+                const res = await fetchOriginal.apply(this, args);
+                if (res.status === 401) window.location.href = '/login';
+                return res;
+            };
+        })();
+    </script>
+</head>
+<body>
+
+    <div class="sidebar">
+        <img src="logo.png" alt="Logo" class="logo">
+        <a href="/dashboard" class="menu-item active">📊 Dashboard General</a>
+        <a href="/historial-ventas" class="menu-item">📋 Historial de Ventas</a>
+        <a href="/platillos-admin" class="menu-item">🍲 Administrar Platillos</a>
+        <div class="menu-item volver" onclick="location.href='/menu'">↩ VOLVER AL MENÚ</div>
+    </div>
+
+    <div class="content">
+        <h2>Panel de Control Administrativo</h2>
+
+        <div class="dash-layout">
+            <div class="dash-main">
+                <div class="filtros-tiempo">
+                    <button class="btn-filtro active" onclick="cambiarPeriodo('hoy', this)">Hoy</button>
+                    <button class="btn-filtro" onclick="cambiarPeriodo('semana', this)">Semana</button>
+                    <button class="btn-filtro" onclick="cambiarPeriodo('mes', this)">Mes</button>
+                </div>
+
+                <div class="kpi-container">
+                    <div class="card-kpi kpi-ingresos">
+                        <span class="kpi-title">Ingresos del Periodo</span>
+                        <span class="kpi-value" id="kpiIngresos">C$ 0.00</span>
+                        <span class="kpi-sub" id="subIngresos"></span>
+                    </div>
+                    <div class="card-kpi kpi-ganancia">
+                        <span class="kpi-title">Ganancia Neta</span>
+                        <span class="kpi-value" id="kpiGanancia">C$ 0.00</span>
+                        <span class="kpi-sub"></span>
+                    </div>
+                    <div class="card-kpi kpi-ordenes">
+                        <span class="kpi-title">Órdenes del Periodo</span>
+                        <span class="kpi-value" id="kpiOrdenes">0</span>
+                        <span class="kpi-sub" id="subOrdenes"></span>
+                    </div>
+                    <div class="card-kpi kpi-estrella">
+                        <span class="kpi-title">Platillo Estrella</span>
+                        <span class="kpi-value" id="kpiEstrella" style="font-size: 18px; display:block; margin-top:5px;">Cargando...</span>
+                    </div>
+                    <div class="card-kpi kpi-alertas">
+                        <span class="kpi-title">Alertas de Stock (&le;5)</span>
+                        <span class="kpi-value" id="kpiAlertas">0</span>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Ranking de Ventas y Ganancias por Platillo</h3>
+                        <table class="tabla-top">
+                            <thead>
+                                <tr>
+                                    <th>Platillo</th>
+                                    <th>Unidades Vendidas</th>
+                                    <th style="text-align: right;">Ganancia Neta</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaPlatillosTop">
+                                <tr><td colspan="3" style="text-align:center; color:#888;">Cargando datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3>Preferencia de Métodos de Pago</h3>
+                        <div style="position: relative; height: 230px; width: 100%;">
+                            <canvas id="chartMetodosPago"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="panel-facturas">
+                <div class="pf-head">
+                    <h3>Facturas</h3>
+                    <span class="badge-pend" id="pfBadge" style="display:none;"></span>
+                </div>
+                <p class="pf-sub"></p>
+                <input type="search" id="buscarFactura" class="pf-buscar" placeholder="Buscar mediante nombres" oninput="filtrarFacturas()">
+                <div class="pf-lista" id="listaFacturas">
+                    <div class="pf-vacio">Cargando facturas...</div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <script>
+        let periodoActual = 'hoy';
+        let miGrafico = null;
+        let facturasCache = [];
+
+        const esc = Factura.esc;
+        const dinero = Factura.dinero;
+
+        function cambiarPeriodo(periodo, boton) {
+            periodoActual = periodo;
+            document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
+            boton.classList.add('active');
+            cargarDashboard();
+        }
+
+        async function cargarDashboard() {
+            try {
+                // 1. Métricas del período seleccionado
+                const resMetricas = await fetch(`/api/dashboard/metricas?periodo=${periodoActual}`);
+                const metricas = await resMetricas.json();
+
+                document.getElementById('kpiIngresos').innerText = dinero(metricas.ingresos);
+                document.getElementById('subIngresos').innerText = `Incluye IVA recaudado: ${dinero(metricas.iva)} (no es ganancia)`;
+
+                const ganancia = Number(metricas.ganancia || 0);
+                const elGanancia = document.getElementById('kpiGanancia');
+                elGanancia.innerText = dinero(ganancia);
+                elGanancia.classList.toggle('negativo', ganancia < 0);
+
+                document.getElementById('kpiOrdenes').innerText = metricas.ordenes;
+                document.getElementById('subOrdenes').innerText = metricas.reembolsos > 0
+                    ? `${metricas.reembolsos} reembolso(s) aceptado(s) no incluido(s)`
+                    : '';
+                document.getElementById('kpiEstrella').innerText = metricas.platilloEstrella;
+
+                const alertasElement = document.getElementById('kpiAlertas');
+                alertasElement.innerText = metricas.alertasStock;
+                alertasElement.classList.toggle('critico', metricas.alertasStock > 0);
+
+                // 2. Ranking de platillos con su ganancia neta
+                const resRanking = await fetch(`/api/dashboard/ranking-platillos?periodo=${periodoActual}`);
+                const ranking = await resRanking.json();
+                const tbody = document.getElementById('tablaPlatillosTop');
+
+                if (!ranking || ranking.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888; font-style:italic;">No se registran ventas en este rango de tiempo.</td></tr>`;
+                } else {
+                    tbody.innerHTML = ranking.map(p => `
+                        <tr>
+                            <td><strong>${esc(p.nombre_platillo)}</strong></td>
+                            <td>${p.total_vendido} unidades</td>
+                            <td style="text-align: right; color: ${p.ganancia_total < 0 ? 'var(--secondary)' : 'var(--primary)'}; font-weight: bold;">${dinero(p.ganancia_total)}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                // 3. Métodos de pago
+                const resMetodos = await fetch(`/api/dashboard/metodos-pago?periodo=${periodoActual}`);
+                const datosMetodos = await resMetodos.json();
+
+                const labels = datosMetodos.map(item => item.metodo_pago);
+                const valores = datosMetodos.map(item => item.cantidad);
+
+                const ctx = document.getElementById('chartMetodosPago').getContext('2d');
+                if (miGrafico) miGrafico.destroy();
+
+                miGrafico = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: valores,
+                            backgroundColor: ['#4CAF50', '#e30613', '#0d47a1', '#ff9800'],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error cargando dashboard:", error);
+                Swal.fire('Error', 'No se pudieron extraer los reportes filtrados.', 'error');
+            }
+        }
+
+        /* ---------- FACTURAS (último mes) ---------- */
+        async function cargarFacturas() {
+            try {
+                const res = await fetch('/api/dashboard/facturas');
+                const datos = await res.json();
+                facturasCache = Array.isArray(datos) ? datos : [];
+                filtrarFacturas();
+            } catch (e) {
+                document.getElementById('listaFacturas').innerHTML = '<div class="pf-vacio">No se pudieron cargar las facturas.</div>';
+            }
+        }
+
+        function filtrarFacturas() {
+            const texto = document.getElementById('buscarFactura').value.trim().toLowerCase().replace(/^#/, '');
+            const lista = document.getElementById('listaFacturas');
+
+            const pendientes = facturasCache.filter(f => f.reembolso && f.reembolso.estado === 'Pendiente').length;
+            const badge = document.getElementById('pfBadge');
+            badge.style.display = pendientes > 0 ? 'inline-block' : 'none';
+            badge.innerText = `${pendientes} reembolso(s)`;
+
+            const visibles = facturasCache.filter(f =>
+                !texto || String(f.nombre_mostrar).toLowerCase().includes(texto) || String(f.id_venta) === texto
+            );
+
+            if (visibles.length === 0) {
+                lista.innerHTML = `<div class="pf-vacio">${facturasCache.length === 0 ? 'No hay facturas en los últimos 30 días.' : 'No hay resultados para esa búsqueda.'}</div>`;
+                return;
+            }
+
+            lista.innerHTML = visibles.map(f => {
+                const fecha = new Date(f.fecha_venta).toLocaleString('es-NI', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const estado = f.reembolso ? f.reembolso.estado : null;
+                let extra = '';
+                if (estado === 'Pendiente') extra = `<button class="btn-alerta" title="Solicitud de reembolso" onclick="revisarReembolso(${f.id_venta})">!</button>`;
+                else if (estado === 'Aceptado') extra = `<span class="tag-reemb tag-ok">Reembolsada</span>`;
+                else if (estado === 'Rechazado') extra = `<span class="tag-reemb tag-no">Rechazado</span>`;
+
+                return `
+                    <div class="pf-item">
+                        <span class="pf-id">#${f.id_venta}</span>
+                        <span class="pf-nombre">${esc(f.nombre_mostrar)}<span class="pf-fecha">${fecha}</span></span>
+                        ${extra}
+                        <button class="btn-ver" onclick="verFacturaAdmin(${f.id_venta})">Ver Factura</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function verFacturaAdmin(id) {
+            const f = facturasCache.find(x => x.id_venta === id);
+            if (!f) return;
+            try {
+                const res = await fetch(`/ventas/${id}/detalles`);
+                const detalles = await res.json();
+
+                const factura = {
+                    id_venta: f.id_venta,
+                    fecha_venta: f.fecha_venta,
+                    nombre_mostrar: f.nombre_mostrar,
+                    metodo_pago: f.metodo_pago,
+                    total_venta: f.total_venta,
+                    reembolso_estado: f.reembolso ? f.reembolso.estado : null,
+                    items: detalles.map(d => ({
+                        nombre: d.nombre_platillo,
+                        precio: Number(d.precio),
+                        cantidad: d.cantidad,
+                        subtotal: Number(d.subtotal)
+                    }))
+                };
+
+                // El botón de imprimir no cierra la ventana: se puede imprimir las veces que haga falta
+                Swal.fire({
+                    html: Factura.html(factura),
+                    width: 640,
+                    showCloseButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: '🖨️ Imprimir / Descargar PDF',
+                    cancelButtonText: 'Cerrar',
+                    confirmButtonColor: '#4CAF50',
+                    cancelButtonColor: '#888888',
+                    preConfirm: () => { Factura.pdf(factura); return false; }
+                });
+            } catch (e) {
+                Swal.fire('Error', 'No se pudo cargar la factura.', 'error');
+            }
+        }
+
+        async function revisarReembolso(id) {
+            const f = facturasCache.find(x => x.id_venta === id);
+            if (!f || !f.reembolso) return;
+
+            const fechaCompra = new Date(f.fecha_venta).toLocaleString('es-NI');
+            const r = await Swal.fire({
+                title: `Solicitud de reembolso · Pedido #${id}`,
+                html: `
+                    <div style="text-align:left; line-height:1.7;">
+                        <div><b>Cliente:</b> ${esc(f.nombre_mostrar)}</div>
+                        <div><b>Fecha de la compra:</b> ${fechaCompra}</div>
+                        <div><b>Total pagado:</b> ${dinero(f.total_venta)} (${esc(f.metodo_pago)})</div>
+                        <div style="margin-top:10px;"><b>Motivo del reembolso:</b></div>
+                        <div style="background:#f7f7f7; border-left:4px solid #e30613; padding:10px 12px; border-radius:6px; white-space:pre-wrap; margin-top:4px;">${esc(f.reembolso.motivo)}</div>
+                        <div style="margin-top:12px; font-size:12px; color:#888;">Al aceptar, la venta se descuenta de los ingresos y de la ganancia, y se registra como pérdida el costo del platillo.</div>
+                    </div>`,
+                showDenyButton: true,
+                showCancelButton: true,
+                confirmButtonText: 'Aceptar reembolso',
+                denyButtonText: 'Rechazar',
+                cancelButtonText: 'Cerrar',
+                confirmButtonColor: '#4CAF50',
+                denyButtonColor: '#e30613',
+                cancelButtonColor: '#888888'
+            });
+
+            if (r.isConfirmed) await resolverReembolso(id, 'aceptar');
+            else if (r.isDenied) await resolverReembolso(id, 'rechazar');
+        }
+
+        async function resolverReembolso(id, accion) {
+            try {
+                const res = await fetch('/api/dashboard/reembolsos/resolver', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_venta: id, accion })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    await Swal.fire('Aviso', data.error || 'No se pudo procesar la solicitud.', 'warning');
+                } else {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: accion === 'aceptar' ? 'Reembolso aceptado' : 'Reembolso rechazado',
+                        timer: 1600,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (e) {
+                await Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error');
+            }
+            cargarFacturas();
+            cargarDashboard();
+        }
+
+        window.onload = function () {
+            cargarDashboard();
+            cargarFacturas();
+        };
+    </script>
+</body>
+</html>
